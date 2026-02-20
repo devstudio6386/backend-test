@@ -588,39 +588,37 @@ const supabaseClient = supabase.createClient(
 console.log("Connected:", supabaseClient);
 
 
-async function loadMenu() {
-  const { data, error } = await supabaseClient
+async function loadMenu(category = "All") {
+
+  let query = supabaseClient
     .from("menu")
     .select("*");
 
+  if (category !== "All") {
+    query = query.eq("category", category);
+  }
+
+  const { data, error } = await query;
+
   if (error) {
-    console.error("Error:", error);
+    console.error(error);
     return;
   }
 
   const container = document.getElementById("menu-container");
   container.innerHTML = "";
 
- data.forEach(item => {
-  container.innerHTML += `
-    <div class="bg-[#1e293b] rounded-2xl overflow-hidden shadow-lg">
-      
-      <img src="${item.image}" 
-           class="w-full h-52 object-cover">
-
-      <div class="p-4">
-        <h2 class="text-lg font-semibold text-white">
-          ${item.name}
-        </h2>
-
-        <p class="text-yellow-400 font-bold text-lg mt-1">
-          ₹${item.price}
-        </p>
+  data.forEach(item => {
+    container.innerHTML += `
+      <div class="bg-[#1e203b] rounded-xl overflow-hidden">
+        <img src="${item.image}" class="w-full h-52 object-cover">
+        <div class="p-4">
+          <h2 class="text-lg font-semibold">${item.name}</h2>
+          <p class="text-yellow-400 font-bold">₹${item.price}</p>
+        </div>
       </div>
-
-    </div>
-  `;
-});
+    `;
+  });
 }
 
 loadMenu();
