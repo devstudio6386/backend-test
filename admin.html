@@ -1,52 +1,43 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Admin Login</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    body {
-      background: #0D0D0D;
-      color: white;
-      font-family: Arial;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-    .login-box {
-      background: #1A1A1A;
-      padding: 30px;
-      border-radius: 10px;
-      width: 300px;
-    }
-    input {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      background: #222;
-      border: 1px solid #333;
-      color: white;
-    }
-    button {
-      width: 100%;
-      padding: 10px;
-      margin-top: 15px;
-      background: #A8E63D;
-      border: none;
-      font-weight: bold;
-      cursor: pointer;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Login</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
-<body>
+<body class="min-h-screen bg-[#0D0D0D] flex items-center justify-center px-4">
 
-<div class="login-box">
-  <h2>Admin Login</h2>
+<div class="w-full max-w-sm bg-[#1A1A1A] p-6 rounded-xl shadow-xl">
 
-  <input type="email" id="email" placeholder="Email">
-  <input type="password" id="password" placeholder="Password">
-  <button onclick="login()">Login</button>
+<h2 class="text-2xl font-bold text-white mb-6 text-center">
+Admin Login
+</h2>
+
+<input 
+type="email" 
+id="email" 
+placeholder="Email"
+class="w-full mb-4 px-4 py-3 rounded-lg bg-[#2A2A2A] text-white focus:outline-none focus:border border-[#A8E63D]"
+>
+
+<input 
+type="password" 
+id="password" 
+placeholder="Password"
+class="w-full mb-6 px-4 py-3 rounded-lg bg-[#2A2A2A] text-white focus:outline-none focus:border border-[#A8E63D]"
+>
+
+<button 
+onclick="login()" 
+class="w-full py-3 rounded-lg bg-[#A8E63D] text-black font-bold hover:opacity-90 transition"
+> 
+Login
+</button>
+
 </div>
 
 <script>
@@ -55,30 +46,28 @@ const supabaseClient = supabase.createClient(
   "sb_publishable_4_CsTkcZtuVeFxMSpjR8mQ_NpZaGkWX"
 );
 
-// Agar already login hai to direct index pe bhej do
-supabaseClient.auth.getUser().then(({ data }) => {
-  if (data.user) {
-    window.location.href = "index.html";
-  }
-});
-
 async function login() {
-
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
-  const { data, error } = await supabaseClient.auth.signInWithPassword({
+  const { error } = await supabaseClient.auth.signInWithPassword({
     email,
     password
   });
 
   if (error) {
     alert("Login Failed");
-    console.log(error);
   } else {
     window.location.href = "dashboard.html";
   }
 }
+
+// Already logged-in check
+supabaseClient.auth.getUser().then(({ data }) => {
+  if (data.user) {
+    window.location.href = "dashboard.html";
+  }
+});
 </script>
 
 </body>

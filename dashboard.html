@@ -1,81 +1,56 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Admin Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard</title>
 
-  <style>
-    body {
-      background: #0D0D0D;
-      color: white;
-      font-family: Arial;
-      padding: 20px;
-      max-width: 600px;
-      margin: auto;
-    }
-
-    h2, h3 { margin-top: 20px; }
-
-    input {
-      width: 100%;
-      padding: 10px;
-      margin-top: 8px;
-      background: #1A1A1A;
-      border: 1px solid #333;
-      color: white;
-      border-radius: 5px;
-    }
-
-    button {
-      padding: 10px;
-      margin-top: 10px;
-      cursor: pointer;
-      border-radius: 5px;
-      border: none;
-    }
-
-    .add-btn {
-      background: #A8E63D;
-      font-weight: bold;
-    }
-
-    .delete-btn {
-      background: red;
-      color: white;
-      margin-top: 5px;
-    }
-
-    .logout-btn {
-      background: #444;
-      color: white;
-      float: right;
-    }
-
-    .card {
-      background: #1A1A1A;
-      padding: 12px;
-      margin-top: 10px;
-      border-radius: 8px;
-    }
-  </style>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
-<body>
+<body class="min-h-screen bg-[#0D0D0D] text-white px-4 py-6">
 
-<h2>Admin Dashboard</h2>
-<button class="logout-btn" onclick="logout()">Logout</button>
+<div class="max-w-xl mx-auto">
 
-<h3>Add New Dish</h3>
+<!-- Header -->
+<div class="flex justify-between items-center mb-6">
+  <h1 class="text-2xl font-bold">Admin Dashboard</h1>
+  <button onclick="logout()" 
+    class="px-4 py-2 bg-red-500 rounded-lg text-white font-semibold">
+    Logout
+  </button>
+</div>
 
-<input type="text" id="name" placeholder="Dish Name">
-<input type="text" id="category" placeholder="Category (Example: Burger)">
-<input type="number" id="price" placeholder="Price">
-<input type="text" id="image" placeholder="Image URL">
+<!-- Add Dish Form -->
+<div class="bg-[#1A1A1A] p-5 rounded-xl mb-8">
+  <h2 class="text-lg font-semibold mb-4">Add New Dish</h2>
 
-<button class="add-btn" onclick="addDish()">Add Dish</button>
+  <input id="name" placeholder="Dish Name"
+    class="w-full mb-3 px-4 py-3 rounded-lg bg-[#2A2A2A]">
 
-<h3>All Dishes</h3>
-<div id="dish-list"></div>
+  <input id="category" placeholder="Category"
+    class="w-full mb-3 px-4 py-3 rounded-lg bg-[#2A2A2A]">
+
+  <input id="price" placeholder="Price"
+    class="w-full mb-3 px-4 py-3 rounded-lg bg-[#2A2A2A]">
+
+  <input id="image" placeholder="Image URL"
+    class="w-full mb-4 px-4 py-3 rounded-lg bg-[#2A2A2A]">
+
+  <button onclick="addDish()"
+    class="w-full py-3 bg-[#A8E63D] text-black font-bold rounded-lg">
+    Add Dish
+  </button>
+</div>
+
+<!-- Dish List -->
+<div>
+  <h2 class="text-lg font-semibold mb-4">All Dishes</h2>
+  <div id="dish-list" class="space-y-4"></div>
+</div>
+
+</div>
 
 <script>
 const supabaseClient = supabase.createClient(
@@ -83,46 +58,12 @@ const supabaseClient = supabase.createClient(
   "sb_publishable_4_CsTkcZtuVeFxMSpjR8mQ_NpZaGkWX"
 );
 
-// 🔐 Protect page
+// Protect dashboard
 supabaseClient.auth.getUser().then(({ data }) => {
   if (!data.user) {
     window.location.href = "admin.html";
   }
 });
-
-async function logout() {
-  await supabaseClient.auth.signOut();
-  window.location.href = "admin.html";
-}
-
-async function loadDishes() {
-  const { data, error } = await supabaseClient
-    .from("menu")
-    .select("*")
-    .order("id", { ascending: false });
-
-  if (error) {
-    console.error(error);
-    return;
-  }
-
-  const container = document.getElementById("dish-list");
-  container.innerHTML = "";
-
-  data.forEach(item => {
-    container.innerHTML += `
-      <div class="card">
-        <strong>${item.name}</strong> 
-        <br>Category: ${item.category}
-        <br>Price: ₹${item.price}
-        <br>
-        <button class="delete-btn" onclick="deleteDish(${item.id})">
-          Delete
-        </button>
-      </div>
-    `;
-  });
-}
 
 async function addDish() {
   const name = document.getElementById("name").value;
@@ -130,39 +71,41 @@ async function addDish() {
   const price = document.getElementById("price").value;
   const image = document.getElementById("image").value;
 
-  if (!name || !category || !price || !image) {
-    alert("Fill all fields");
-    return;
-  }
+  const { error } = await supabaseClient.from("menu").insert([
+    { name, category, price, image }
+  ]);
 
-  const { error } = await supabaseClient
-    .from("menu")
-    .insert([{ name, category, price, image }]);
-
-  if (error) {
-    alert("Error adding dish");
-    console.log(error);
-  } else {
+  if (!error) {
     alert("Dish Added");
-    document.getElementById("name").value = "";
-    document.getElementById("category").value = "";
-    document.getElementById("price").value = "";
-    document.getElementById("image").value = "";
     loadDishes();
   }
 }
 
-async function deleteDish(id) {
-  const { error } = await supabaseClient
-    .from("menu")
-    .delete()
-    .eq("id", id);
+async function loadDishes() {
+  const { data } = await supabaseClient.from("menu").select("*");
 
-  if (error) {
-    alert("Error deleting");
-  } else {
-    loadDishes();
-  }
+  const container = document.getElementById("dish-list");
+  container.innerHTML = data.map(item => `
+    <div class="bg-[#1A1A1A] p-4 rounded-xl">
+      <h3 class="font-bold">${item.name}</h3>
+      <p class="text-sm text-gray-400">${item.category}</p>
+      <p class="text-[#A8E63D] font-semibold mb-3">₹${item.price}</p>
+      <button onclick="deleteDish('${item.id}')"
+        class="px-4 py-2 bg-red-500 rounded-lg text-white">
+        Delete
+      </button>
+    </div>
+  `).join("");
+}
+
+async function deleteDish(id) {
+  await supabaseClient.from("menu").delete().eq("id", id);
+  loadDishes();
+}
+
+async function logout() {
+  await supabaseClient.auth.signOut();
+  window.location.href = "admin.html";
 }
 
 loadDishes();
