@@ -1,202 +1,287 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Zixy Admin Dashboard</title>
+<title>Restaurant Dashboard</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+body{background:#0D0D0D;color:white;font-family:sans-serif}
+.card{background:#1A1A1A}
+</style>
 </head>
 
-<body class="bg-[#0D0D0D] text-white min-h-screen p-6">
+<body>
 
-<div class="max-w-6xl mx-auto">
+<div class="max-w-5xl mx-auto p-6">
 
-<!-- HEADER -->
-<div class="flex justify-between items-center mb-8">
-  <h1 class="text-3xl font-bold">Admin Orders Panel</h1>
-  <div class="flex gap-3">
-    <button onclick="downloadToday()"
-      class="bg-blue-600 px-4 py-2 rounded-lg">
-      Download Today
-    </button>
-    <button onclick="logout()"
-      class="bg-red-600 px-4 py-2 rounded-lg">
-      Logout
-    </button>
-  </div>
+<h1 class="text-2xl font-bold mb-6">Restaurant Dashboard</h1>
+
+<div class="flex justify-between mb-6">
+<div id="restaurantName" class="text-gray-400"></div>
+<button onclick="logout()" class="text-red-400">Logout</button>
 </div>
 
-<!-- TODAY SUMMARY -->
-<div id="today-summary"
-     class="mb-6 text-xl font-semibold text-[#A8E63D]">
+<!-- SUMMARY -->
+<div class="grid grid-cols-2 gap-4 mb-6">
+<div class="card p-4 rounded">
+<p class="text-gray-400 text-sm">Today's Orders</p>
+<p id="todayCount" class="text-2xl font-bold">0</p>
+</div>
+<div class="card p-4 rounded">
+<p class="text-gray-400 text-sm">Today's Sales</p>
+<p class="text-2xl font-bold">₹<span id="todaySales">0</span></p>
+</div>
 </div>
 
-<!-- ORDERS -->
-<div id="orders-container" class="space-y-6"></div>
+<div class="flex justify-end mb-4">
+<button onclick="downloadTodayCSV()"
+class="bg-green-500 text-black px-4 py-2 rounded font-semibold">
+Download Today CSV
+</button>
+</div>
+
+<h2 class="text-xl font-bold mb-4">All Orders</h2>
+
+<div id="ordersContainer" class="space-y-4"></div>
+
+<p id="statusMsg" class="text-center mt-4 text-gray-400"></p>
 
 </div>
 
 <script>
 
-const supabaseClient = supabase.createClient(
-  "https://pxdzdwljccgdruzaqhlt.supabase.co",
-  "sb_publishable_4_CsTkcZtuVeFxMSpjR8mQ_NpZaGkWX"
-);
+/* =========================
+   SUPABASE
+========================= */
 
-// Protect Page
-supabaseClient.auth.getUser().then(({ data }) => {
-  if (!data.user) window.location.href = "admin.html";
-});
+const supabaseUrl = "https://pxdzdwljccgdruzaqhlt.supabase.co";
+const supabaseKey = "sb_publishable_4_CsTkcZtuVeFxMSpjR8mQ_NpZaGkWX";
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-async function loadOrders() {
+let restaurantId = null;
 
-  const today = new Date();
-  today.setHours(0,0,0,0);
+/* =========================
+   AUTH + LOAD PROFILE
+========================= */
 
-  const { data: orders, error } = await supabaseClient
-    .from("orders")
-    .select("*")
-    .order("created_at", { ascending: false });
+async function init(){
 
-  if (error) {
-    console.error(error);
-    return;
-  }
+const { data:{ user } } = await supabase.auth.getUser();
 
-  const { data: allItems } = await supabaseClient
-    .from("order_items")
-    .select("*");
-
-  const container = document.getElementById("orders-container");
-  container.innerHTML = "";
-
-  if (!orders || orders.length === 0) {
-    container.innerHTML = "<p>No Orders Yet</p>";
-    return;
-  }
-
-  let todayTotal = 0;
-  let todayCount = 0;
-
-  orders.forEach(order => {
-
-    const orderDate = new Date(order.created_at);
-
-    if (orderDate >= today) {
-      todayTotal += Number(order.total_amount);
-      todayCount++;
-    }
-
-    const items = allItems.filter(i => i.order_id === order.id);
-
-    let itemsHtml = "";
-    items.forEach(item => {
-      itemsHtml +=
-        "<p class='text-sm'>" +
-        item.quantity + "x " +
-        item.item_name +
-        "</p>";
-    });
-
-    container.innerHTML +=
-      "<div class='bg-[#1A1A1A] p-5 rounded-xl shadow-lg'>" +
-
-        "<div class='flex justify-between items-center mb-2'>" +
-          "<h2 class='font-bold text-lg'>Table " + order.table_number + "</h2>" +
-
-          "<select onchange=\"updateStatus('" + order.id + "', this.value)\" class='bg-[#2A2A2A] px-3 py-1 rounded'>" +
-            "<option value='pending' " + (order.status==="pending"?"selected":"") + ">Pending</option>" +
-            "<option value='preparing' " + (order.status==="preparing"?"selected":"") + ">Preparing</option>" +
-            "<option value='completed' " + (order.status==="completed"?"selected":"") + ">Completed</option>" +
-          "</select>" +
-        "</div>" +
-
-        itemsHtml +
-
-        "<p class='mt-3 font-bold text-[#A8E63D]'>₹" +
-        order.total_amount +
-        "</p>" +
-
-        "<button onclick=\"deleteOrder('" + order.id + "')\" class='mt-3 bg-red-600 px-3 py-1 rounded text-sm'>Delete</button>" +
-
-      "</div>";
-  });
-
-  document.getElementById("today-summary").innerText =
-    "Today's Orders: " + todayCount +
-    " | Total Sales: ₹" + todayTotal;
+if(!user){
+window.location.href="admin.html";
+return;
 }
 
-async function updateStatus(id, status) {
-  await supabaseClient
-    .from("orders")
-    .update({ status })
-    .eq("id", id);
+const { data, error } = await supabase
+.from("profiles")
+.select("restaurant_id, restaurants(name)")
+.eq("id", user.id)
+.single();
 
-  loadOrders();
+if(error || !data){
+document.body.innerHTML="<h1 style='padding:40px'>Access Denied</h1>";
+return;
 }
 
-async function deleteOrder(id) {
-
-  if (!confirm("Delete this order?")) return;
-
-  await supabaseClient.from("order_items")
-    .delete()
-    .eq("order_id", id);
-
-  await supabaseClient.from("orders")
-    .delete()
-    .eq("id", id);
-
-  loadOrders();
-}
-
-async function downloadToday() {
-
-  const today = new Date();
-  today.setHours(0,0,0,0);
-
-  const { data } = await supabaseClient
-    .from("orders")
-    .select("*");
-
-  if (!data) return;
-
-  let csv = "Table,Total,Status,Date\n";
-
-  data.forEach(order => {
-
-    const orderDate = new Date(order.created_at);
-
-    if (orderDate >= today) {
-      csv +=
-        order.table_number + "," +
-        order.total_amount + "," +
-        order.status + "," +
-        order.created_at + "\n";
-    }
-  });
-
-  const blob = new Blob([csv], { type: "text/csv" });
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "today_orders.csv";
-  a.click();
-}
-
-async function logout() {
-  await supabaseClient.auth.signOut();
-  window.location.href = "admin.html";
-}
-
-// Auto refresh every 7 sec
-setInterval(loadOrders, 7000);
+restaurantId = data.restaurant_id;
+document.getElementById("restaurantName").innerText =
+"Restaurant: " + (data.restaurants?.name || "");
 
 loadOrders();
+}
+
+/* =========================
+   LOAD ORDERS
+========================= */
+
+async function loadOrders(){
+
+if(!restaurantId) return;
+
+const { data:orders, error } = await supabase
+.from("orders")
+.select("*")
+.eq("restaurant_id", restaurantId)
+.order("created_at",{ascending:false});
+
+if(error){
+document.getElementById("ordersContainer").innerHTML =
+"<p class='text-red-400'>Failed to load orders</p>";
+return;
+}
+
+renderOrders(orders);
+calculateTodayStats(orders);
+}
+
+/* =========================
+   RENDER ORDERS
+========================= */
+
+async function renderOrders(orders){
+
+const container = document.getElementById("ordersContainer");
+container.innerHTML="";
+
+if(!orders || orders.length===0){
+container.innerHTML="<p>No Orders Yet</p>";
+return;
+}
+
+for(const order of orders){
+
+const { data:items } = await supabase
+.from("order_items")
+.select("*")
+.eq("order_id", order.id);
+
+let itemsHTML="";
+items?.forEach(i=>{
+itemsHTML += <p class="text-sm">${i.quantity}x ${i.item_name}</p>;
+});
+
+container.innerHTML += `
+<div class="card p-4 rounded">
+<div class="flex justify-between items-center mb-2">
+<span class="font-bold">Order #${order.id.slice(0,6)}</span>
+
+<div class="flex items-center gap-3">
+<select onchange="updateStatus('${order.id}',this.value)"
+class="bg-black border border-gray-600 rounded px-2 py-1 text-sm">
+<option value="pending" ${order.status==="pending"?"selected":""}>Pending</option>
+<option value="preparing" ${order.status==="preparing"?"selected":""}>Preparing</option>
+<option value="completed" ${order.status==="completed"?"selected":""}>Completed</option>
+</select>
+
+<button onclick="deleteOrder('${order.id}')"
+class="text-red-400 text-sm">Delete</button>
+</div>
+
+</div>
+
+${itemsHTML}
+
+<p class="mt-3 font-bold text-green-400">₹${order.total_amount}</p>
+
+</div>
+`;
+}
+
+}
+
+/* =========================
+   TODAY STATS
+========================= */
+
+function calculateTodayStats(orders){
+
+const today = new Date();
+today.setHours(0,0,0,0);
+
+let count=0;
+let total=0;
+
+orders.forEach(order=>{
+const orderDate = new Date(order.created_at);
+if(orderDate>=today){
+count++;
+total += Number(order.total_amount);
+}
+});
+
+document.getElementById("todayCount").innerText = count;
+document.getElementById("todaySales").innerText = total;
+}
+
+/* =========================
+   UPDATE STATUS
+========================= */
+
+async function updateStatus(id,status){
+
+await supabase
+.from("orders")
+.update({status:status})
+.eq("id",id);
+
+loadOrders();
+}
+
+/* =========================
+   DELETE ORDER
+========================= */
+
+async function deleteOrder(id){
+
+if(!confirm("Delete this order?")) return;
+
+await supabase.from("order_items").delete().eq("order_id",id);
+await supabase.from("orders").delete().eq("id",id);
+
+loadOrders();
+}
+
+/* =========================
+   DOWNLOAD CSV
+========================= */
+
+async function downloadTodayCSV(){
+
+const today = new Date();
+today.setHours(0,0,0,0);
+
+const { data } = await supabase
+.from("orders")
+.select("*")
+.eq("restaurant_id", restaurantId);
+
+if(!data) return;
+
+let csv="OrderID,Total,Status,Date\n";
+
+data.forEach(order=>{
+const orderDate = new Date(order.created_at);
+if(orderDate>=today){
+csv += ${order.id},${order.total_amount},${order.status},${order.created_at}\n;
+}
+});
+
+const blob = new Blob([csv], { type: "text/csv" });
+const url = URL.createObjectURL(blob);
+
+const a = document.createElement("a");
+a.href=url;
+a.download="today_orders.csv";
+a.click();
+}
+
+/* =========================
+   LOGOUT
+========================= */
+
+async function logout(){
+await supabase.auth.signOut();
+window.location.href="admin.html";
+}
+
+/* =========================
+   AUTO REFRESH
+========================= */
+
+setInterval(()=>{
+loadOrders();
+},7000);
+
+/* =========================
+   INIT
+========================= */
+
+init();
 
 </script>
 

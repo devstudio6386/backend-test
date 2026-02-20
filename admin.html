@@ -1,134 +1,191 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Login</title>
+<title>Admin Panel</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
-
-body{
-  font-family:Arial, sans-serif;
-  background:linear-gradient(135deg,#0f0f0f,#1a1a1a);
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
-  color:white;
-}
-
-.login-box{
-  width:100%;
-  max-width:380px;
-  background:#1c1c1c;
-  padding:30px;
-  border-radius:12px;
-  box-shadow:0 10px 25px rgba(0,0,0,0.5);
-}
-
-h2{
-  text-align:center;
-  margin-bottom:20px;
-}
-
-input{
-  width:100%;
-  padding:12px;
-  margin:10px 0;
-  border-radius:8px;
-  border:1px solid #333;
-  background:#111;
-  color:white;
-}
-
-input:focus{
-  outline:none;
-  border-color:#00e676;
-}
-
-button{
-  width:100%;
-  padding:12px;
-  margin-top:15px;
-  border:none;
-  border-radius:8px;
-  background:#00e676;
-  color:black;
-  font-weight:bold;
-  cursor:pointer;
-}
-
-button:hover{
-  opacity:0.9;
-}
-
-.error{
-  color:#ff4d4d;
-  font-size:13px;
-  margin-top:10px;
-  text-align:center;
-}
+body{background:#0D0D0D;color:white;font-family:sans-serif}
+.card{background:#1A1A1A}
 </style>
 </head>
 
 <body>
 
-<div class="login-box">
-  <h2>Admin Login</h2>
+<div class="max-w-3xl mx-auto p-6">
 
-  <input type="email" id="email" placeholder="Email">
-  <input type="password" id="password" placeholder="Password">
+<h1 class="text-2xl font-bold mb-6">Restaurant Admin</h1>
 
-  <button id="loginBtn">Login</button>
-
-  <div class="error" id="errorMsg"></div>
+<div class="flex justify-between mb-6">
+<span id="restaurantName" class="text-gray-400"></span>
+<button onclick="logout()" class="text-red-400">Logout</button>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<h2 class="text-xl font-bold mb-4">Orders</h2>
+
+<div id="ordersContainer" class="space-y-4"></div>
+
+<p id="statusMsg" class="text-center mt-4 text-gray-400"></p>
+
+</div>
 
 <script>
+
+/* =========================
+   SUPABASE CONFIG
+========================= */
+
 const supabaseUrl = "https://pxdzdwljccgdruzaqhlt.supabase.co";
 const supabaseKey = "sb_publishable_4_CsTkcZtuVeFxMSpjR8mQ_NpZaGkWX";
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+let restaurantId = null;
 
-const emailInput = document.getElementById("email");
-const passwordInput = document.getElementById("password");
-const loginBtn = document.getElementById("loginBtn");
-const errorMsg = document.getElementById("errorMsg");
+/* =========================
+   AUTH CHECK
+========================= */
 
-// Check session
-async function checkSession(){
-  const { data } = await supabaseClient.auth.getSession();
-  if(data.session){
-    window.location.href="dashboard.html";
-  }
+async function checkAuth(){
+
+const { data:{ user } } = await supabase.auth.getUser();
+
+if(!user){
+window.location.href="login.html";
+return;
 }
-checkSession();
 
-// Login
-loginBtn.onclick = async () => {
+// get profile
+const { data, error } = await supabase
+.from("profiles")
+.select("restaurant_id, restaurants(name)")
+.eq("id", user.id)
+.single();
 
-  const email = emailInput.value.trim();
-  const password = passwordInput.value.trim();
+if(error || !data){
+document.body.innerHTML="<h1 style='padding:40px'>Access Denied</h1>";
+return;
+}
 
-  if(!email || !password){
-    errorMsg.innerText="Please fill all fields";
-    return;
-  }
+restaurantId = data.restaurant_id;
+document.getElementById("restaurantName").innerText =
+"Restaurant: " + (data.restaurants?.name || "");
 
-  const { error } = await supabaseClient.auth.signInWithPassword({
-    email,
-    password
-  });
+loadOrders();
+}
 
-  if(error){
-    errorMsg.innerText="Invalid login credentials";
-    return;
-  }
+/* =========================
+   LOAD ORDERS
+========================= */
 
-  window.location.href="dashboard.html";
-};
+async function loadOrders(){
+
+const { data, error } = await supabase
+.from("orders")
+.select("*")
+.eq("restaurant_id", restaurantId)
+.order("created_at",{ascending:false});
+
+if(error){
+document.getElementById("ordersContainer").innerHTML =
+"<p class='text-red-400'>Failed to load orders</p>";
+return;
+}
+
+renderOrders(data);
+}
+
+/* =========================
+   RENDER ORDERS
+========================= */
+
+async function renderOrders(orders){
+
+const container = document.getElementById("ordersContainer");
+container.innerHTML="";
+
+if(!orders || orders.length===0){
+container.innerHTML="<p>No Orders Yet</p>";
+return;
+}
+
+for(const order of orders){
+
+// get items
+const { data:items } = await supabase
+.from("order_items")
+.select("*")
+.eq("order_id", order.id);
+
+let itemsHTML="";
+items?.forEach(i=>{
+itemsHTML += <p class="text-sm">${i.quantity}x ${i.item_name}</p>;
+});
+
+container.innerHTML += `
+<div class="card p-4 rounded">
+<div class="flex justify-between mb-2">
+<span class="font-bold">Order #${order.id.slice(0,6)}</span>
+<select onchange="updateStatus('${order.id}',this.value)"
+class="bg-black border border-gray-600 rounded px-2 py-1 text-sm">
+<option value="pending" ${order.status==="pending"?"selected":""}>Pending</option>
+<option value="preparing" ${order.status==="preparing"?"selected":""}>Preparing</option>
+<option value="completed" ${order.status==="completed"?"selected":""}>Completed</option>
+</select>
+</div>
+
+${itemsHTML}
+
+<p class="mt-3 font-bold text-green-400">₹${order.total_amount}</p>
+
+</div>
+`;
+}
+
+}
+
+/* =========================
+   UPDATE STATUS
+========================= */
+
+async function updateStatus(id,status){
+
+await supabase
+.from("orders")
+.update({status:status})
+.eq("id",id);
+
+loadOrders();
+}
+
+/* =========================
+   LOGOUT
+========================= */
+
+async function logout(){
+await supabase.auth.signOut();
+window.location.href="login.html";
+}
+
+/* =========================
+   AUTO REFRESH
+========================= */
+
+setInterval(()=>{
+if(restaurantId){
+loadOrders();
+}
+},7000);
+
+/* =========================
+   INIT
+========================= */
+
+checkAuth();
+
 </script>
 
 </body>

@@ -8,54 +8,75 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<script>
-const supabaseUrl = "https://pxdzdwljccgdruzaqhlt.supabase.co";
-const supabaseKey = "sb_publishable_4_CsTkcZtuVeFxMSpjR8mQ_NpZaGkWX";
-const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-
-let restaurantId = null;
-let menuItems = [];
-let cart = [];
-</script>
-
 <style>
 body{background:#0D0D0D;color:white;font-family:sans-serif}
+.card{background:#1A1A1A}
 </style>
 </head>
+
 <body>
 
 <div class="max-w-xl mx-auto p-4">
 
-<h1 id="restaurantName" class="text-2xl font-bold mb-4"></h1>
+<h1 id="restaurantName" class="text-2xl font-bold mb-4">Loading...</h1>
 
-<div id="menu" class="space-y-4"></div>
+<div id="menuContainer" class="space-y-4 mb-6"></div>
 
 <hr class="my-6 border-gray-700">
 
 <h2 class="text-xl font-bold mb-3">Your Cart</h2>
 
-<div id="cartItems" class="space-y-2 mb-4"></div>
+<div id="cartContainer" class="space-y-3 mb-4"></div>
 
-<button onclick="checkout()" class="w-full bg-green-500 text-black font-bold py-3 rounded">
+<div id="orderSummary" class="mb-4 hidden">
+<div class="flex justify-between text-lg font-bold">
+<span>Total</span>
+<span>₹<span id="totalAmount">0</span></span>
+</div>
+</div>
+
+<button id="orderBtn" onclick="placeOrder()"
+class="w-full bg-green-500 text-black font-bold py-3 rounded">
 Place Order
 </button>
+
+<p id="statusMsg" class="text-center mt-4 text-gray-400"></p>
 
 </div>
 
 <script>
 
-// 🔥 LOAD RESTAURANT BY DOMAIN
+/* =========================
+   SUPABASE CONFIG
+========================= */
+
+const supabaseUrl = "https://pxdzdwljccgdruzaqhlt.supabase.co";
+const supabaseKey = "sb_publishable_4_CsTkcZtuVeFxMSpjR8mQ_NpZaGkWX";
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+/* =========================
+   GLOBAL STATE
+========================= */
+
+let restaurantId = null;
+let menuItems = [];
+let cart = [];
+
+/* =========================
+   LOAD RESTAURANT BY DOMAIN
+========================= */
+
 async function loadRestaurant(){
 
 const domain = window.location.hostname;
 
-const { data, error } = await supabaseClient
+const { data, error } = await supabase
 .from("restaurants")
 .select("*")
 .eq("domain", domain)
 .single();
 
-if(error){
+if(error || !data){
 document.body.innerHTML = "<h1 style='padding:40px'>Restaurant Not Found</h1>";
 return;
 }
@@ -66,33 +87,48 @@ document.getElementById("restaurantName").innerText = data.name;
 loadMenu();
 }
 
-// 🔥 LOAD MENU
+/* =========================
+   LOAD MENU
+========================= */
+
 async function loadMenu(){
 
-const { data, error } = await supabaseClient
+const { data, error } = await supabase
 .from("menu_items")
 .select("*")
 .eq("restaurant_id", restaurantId)
 .eq("is_available", true);
 
-if(error) return;
+if(error){
+document.getElementById("menuContainer").innerHTML =
+"<p class='text-red-400'>Failed to load menu</p>";
+return;
+}
 
 menuItems = data;
 renderMenu();
 }
 
-// 🔥 RENDER MENU
+/* =========================
+   RENDER MENU
+========================= */
+
 function renderMenu(){
 
-const menu = document.getElementById("menu");
-menu.innerHTML = "";
+const container = document.getElementById("menuContainer");
+container.innerHTML = "";
+
+if(menuItems.length === 0){
+container.innerHTML = "<p>No Items Available</p>";
+return;
+}
 
 menuItems.forEach(item=>{
-menu.innerHTML += `
-<div class="flex justify-between bg-[#1A1A1A] p-3 rounded">
+container.innerHTML += `
+<div class="card p-4 rounded flex justify-between items-center">
 <div>
 <p class="font-bold">${item.name}</p>
-<p>₹${item.price}</p>
+<p class="text-gray-400">₹${item.price}</p>
 </div>
 <button onclick="addToCart('${item.id}')"
 class="bg-[#A8E63D] text-black px-3 py-1 rounded">
@@ -103,81 +139,136 @@ Add
 });
 }
 
-// 🔥 ADD TO CART
+/* =========================
+   CART LOGIC
+========================= */
+
 function addToCart(id){
 
 const item = menuItems.find(m=>m.id==id);
 const existing = cart.find(c=>c.id==id);
 
 if(existing){
-existing.qty++;
+existing.quantity++;
 }else{
-cart.push({id:item.id,name:item.name,price:item.price,qty:1});
-}
-
-renderCart();
-}
-
-// 🔥 RENDER CART
-function renderCart(){
-
-const container = document.getElementById("cartItems");
-container.innerHTML="";
-
-cart.forEach(item=>{
-container.innerHTML += `
-<div class="flex justify-between bg-[#1A1A1A] p-2 rounded">
-<span>${item.qty}x ${item.name}</span>
-<span>₹${item.price * item.qty}</span>
-</div>
-`;
+cart.push({
+id:item.id,
+name:item.name,
+price:item.price,
+quantity:1
 });
 }
 
-// 🔥 PLACE ORDER
-async function checkout(){
+updateCartUI();
+}
+
+function updateCartUI(){
+
+const container = document.getElementById("cartContainer");
+const summary = document.getElementById("orderSummary");
+const totalSpan = document.getElementById("totalAmount");
+
+container.innerHTML = "";
 
 if(cart.length===0){
-alert("Cart empty");
+container.innerHTML="<p class='text-gray-500'>Cart Empty</p>";
+summary.classList.add("hidden");
 return;
 }
 
-const total = cart.reduce((sum,i)=>sum+(i.price*i.qty),0);
+let total=0;
+
+cart.forEach(item=>{
+total += item.price * item.quantity;
+
+container.innerHTML += `
+<div class="card p-3 rounded flex justify-between items-center">
+<div>
+<span>${item.quantity}x ${item.name}</span>
+</div>
+<div class="flex items-center gap-3">
+<span>₹${item.price * item.quantity}</span>
+<button onclick="removeItem('${item.id}')" class="text-red-400">✕</button>
+</div>
+</div>
+`;
+});
+
+totalSpan.innerText = total;
+summary.classList.remove("hidden");
+}
+
+function removeItem(id){
+cart = cart.filter(item=>item.id!=id);
+updateCartUI();
+}
+
+/* =========================
+   PLACE ORDER
+========================= */
+
+async function placeOrder(){
+
+if(cart.length===0){
+document.getElementById("statusMsg").innerText="Cart Empty";
+return;
+}
+
+const orderBtn = document.getElementById("orderBtn");
+orderBtn.disabled = true;
+orderBtn.innerText = "Processing...";
+
+const total = cart.reduce((sum,i)=>sum+(i.price*i.quantity),0);
 
 try{
 
-const { data:orderData, error:orderError } = await supabaseClient
+// Insert order
+const { data:orderData, error:orderError } = await supabase
 .from("orders")
 .insert([{
-restaurant_id:restaurantId,
-total_amount:total,
-status:"pending"
+restaurant_id: restaurantId,
+total_amount: total,
+status: "pending"
 }])
 .select()
 .single();
 
 if(orderError) throw orderError;
 
+// Insert order items
 const itemsToInsert = cart.map(item=>({
-order_id:orderData.id,
-item_name:item.name,
-quantity:item.qty,
-price:item.price
+order_id: orderData.id,
+item_name: item.name,
+quantity: item.quantity,
+price: item.price
 }));
 
-await supabaseClient.from("order_items").insert(itemsToInsert);
+const { error:itemsError } = await supabase
+.from("order_items")
+.insert(itemsToInsert);
 
-alert("Order Placed Successfully");
+if(itemsError) throw itemsError;
 
+// Success
 cart=[];
-renderCart();
+updateCartUI();
+
+document.getElementById("statusMsg").innerText="Order Placed Successfully ✅";
+orderBtn.disabled=false;
+orderBtn.innerText="Place Order";
 
 }catch(err){
 console.log(err);
-alert("Order Failed");
+document.getElementById("statusMsg").innerText="Order Failed ❌";
+orderBtn.disabled=false;
+orderBtn.innerText="Place Order";
 }
 
 }
+
+/* =========================
+   INIT
+========================= */
 
 loadRestaurant();
 
