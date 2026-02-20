@@ -66,8 +66,13 @@ const supabaseClient = supabase.createClient(
 let allData = [];
 let activeCategory = "All";
 let searchQuery = "";
+let cart = [];
 
-// Load menu
+// 🪑 Detect Table Number
+const params = new URLSearchParams(window.location.search);
+const tableNumber = params.get("table") || "Unknown";
+
+// 🔥 Load Menu
 async function loadMenu() {
   const { data, error } = await supabaseClient
     .from("menu")
@@ -83,7 +88,7 @@ async function loadMenu() {
   renderMenu();
 }
 
-// Render categories dynamically
+// 🔥 Render Categories
 function renderCategories() {
   const container = document.getElementById("category-pills");
 
@@ -110,7 +115,7 @@ function filterCategory(category) {
   renderMenu();
 }
 
-// Render dishes
+// 🔥 Render Menu
 function renderMenu() {
   const container = document.getElementById("menu-container");
 
@@ -130,12 +135,121 @@ function renderMenu() {
       <div class="p-4">
         <h2 class="text-lg font-semibold">${item.name}</h2>
         <p class="text-[#A8E63D] font-bold text-lg">₹${item.price}</p>
+        <button 
+          onclick="addToCart('${item.id}')"
+          class="mt-3 w-full bg-[#A8E63D] text-black py-2 rounded-lg font-semibold">
+          Add to Cart
+        </button>
       </div>
     </div>
   `).join("");
 }
 
-// Search
+// 🔥 Add To Cart
+function addToCart(id) {
+  const item = allData.find(i => i.id === id);
+
+  const existing = cart.find(i => i.id === id);
+
+  if (existing) {
+    existing.qty += 1;
+  } else {
+    cart.push({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      qty: 1
+    });
+  }
+
+  renderCart();
+}
+
+// 🔥 Render Cart
+function renderCart() {
+  const container = document.getElementById("cart-container");
+
+  let total = 0;
+
+  const itemsHtml = cart.map(item => {
+    total += item.price * item.qty;
+    return `
+      <div class="flex justify-between text-sm mb-2">
+        <span>${item.qty}x ${item.name}</span>
+        <span>₹${item.price * item.qty}</span>
+      </div>
+    `;
+  }).join("");
+
+  container.innerHTML = `
+    ${itemsHtml}
+    <hr class="my-2 border-[#2A2A2A]">
+    <div class="flex justify-between font-bold text-lg">
+      <span>Total</span>
+      <span>₹${total}</span>
+    </div>
+    <button 
+      onclick="placeOrder(${total})"
+      class="mt-4 w-full bg-[#A8E63D] text-black py-2 rounded-lg font-semibold">
+      Place Order
+    </button>
+    <button 
+      onclick="callWaiter()"
+      class="mt-2 w-full bg-white text-black py-2 rounded-lg font-semibold">
+      Call Waiter
+    </button>
+  `;
+}
+
+// 🔥 Place Order
+async function placeOrder(total) {
+  if (cart.length === 0) return alert("Cart is empty");
+
+  const { data: order, error } = await supabaseClient
+    .from("orders")
+    .insert([
+      {
+        table_number: tableNumber,
+        total_amount: total,
+        status: "pending"
+      }
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  const orderItems = cart.map(item => ({
+    order_id: order.id,
+    item_name: item.name,
+    quantity: item.qty,
+    price: item.price
+  }));
+
+  await supabaseClient.from("order_items").insert(orderItems);
+
+  alert("Order placed successfully!");
+
+  cart = [];
+  renderCart();
+}
+
+// 🔔 Call Waiter
+async function callWaiter() {
+  await supabaseClient.from("waiter_calls").insert([
+    {
+      table_number: tableNumber,
+      status: "pending"
+    }
+  ]);
+
+  alert("Waiter has been called!");
+}
+
+// 🔎 Search
 document.getElementById("search-input")
   .addEventListener("input", (e) => {
     searchQuery = e.target.value.toLowerCase();

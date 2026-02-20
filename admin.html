@@ -86,8 +86,8 @@ button:hover{
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
 
+<script>
 const supabaseUrl = "https://pxdzdwljccgdruzaqhlt.supabase.co";
 const supabaseKey = "sb_publishable_4_CsTkcZtuVeFxMSpjR8mQ_NpZaGkWX";
 
@@ -98,7 +98,7 @@ const passwordInput = document.getElementById("password");
 const loginBtn = document.getElementById("loginBtn");
 const errorMsg = document.getElementById("errorMsg");
 
-// Check if already logged in
+// 🔥 Check Session
 async function checkSession(){
   const { data } = await supabaseClient.auth.getSession();
   if(data.session){
@@ -107,7 +107,7 @@ async function checkSession(){
 }
 checkSession();
 
-// Login
+// 🔥 Login
 loginBtn.onclick = async () => {
 
   const email = emailInput.value.trim();
@@ -118,18 +118,35 @@ loginBtn.onclick = async () => {
     return;
   }
 
-  const { error } = await supabaseClient.auth.signInWithPassword({
-    email: email,
-    password: password
+  const { data, error } = await supabaseClient.auth.signInWithPassword({
+    email,
+    password
   });
 
   if(error){
     errorMsg.innerText="Invalid login credentials";
-  }else{
-    window.location.href="dashboard.html";
+    return;
   }
-};
 
+  // 🔥 Fetch Restaurant Mapping
+  const userId = data.user.id;
+
+  const { data: profile, error: profileError } = await supabaseClient
+    .from("profiles")
+    .select("restaurant_id")
+    .eq("id", userId)
+    .single();
+
+  if(profileError || !profile){
+    errorMsg.innerText="Restaurant not assigned to this admin";
+    return;
+  }
+
+  // Save restaurant_id in localStorage
+  localStorage.setItem("restaurant_id", profile.restaurant_id);
+
+  window.location.href="dashboard.html";
+};
 </script>
 
 </body>
