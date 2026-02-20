@@ -6,38 +6,6 @@
 <title>Zixy Admin Dashboard</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
-
-<body class="bg-[#0D0D0D] text-white min-h-screen p-6">
-
-<div class="max-w-6xl mx-auto">
-
-<!-- HEADER -->
-<div class="flex justify-between items-center mb-8">
-  <h1 class="text-3xl font-bold">Zixy Bite Admin</h1>
-  <div class="flex gap-3">
-    <button onclick="downloadToday()"
-      class="bg-blue-600 px-4 py-2 rounded-lg">
-      Download Today
-    </button>
-    <button onclick="logout()"
-      class="bg-red-600 px-4 py-2 rounded-lg">
-      Logout
-    </button>
-  </div>
-</div>
-
-<!-- TODAY TOTAL -->
-<div id="today-summary"
-     class="mb-6 text-xl font-semibold text-[#A8E63D]">
-</div>
-
-<!-- ORDERS -->
-<div id="orders-container" class="space-y-6"></div>
-
-</div>
-
 <script>
 const supabaseClient = supabase.createClient(
   "https://pxdzdwljccgdruzaqhlt.supabase.co",
@@ -46,17 +14,15 @@ const supabaseClient = supabase.createClient(
 
 // Protect Page
 supabaseClient.auth.getUser().then(({ data }) => {
-  if (!data.user) {
-    window.location.href = "admin.html";
-  }
+  if (!data.user) window.location.href = "admin.html";
 });
 
-// Load Orders
 async function loadOrders() {
 
   const today = new Date();
   today.setHours(0,0,0,0);
 
+  // Fetch orders
   const { data: orders, error } = await supabaseClient
     .from("orders")
     .select("*")
@@ -66,6 +32,11 @@ async function loadOrders() {
     console.error(error);
     return;
   }
+
+  // Fetch all order items once
+  const { data: allItems } = await supabaseClient
+    .from("order_items")
+    .select("*");
 
   const container = document.getElementById("orders-container");
   container.innerHTML = "";
@@ -78,67 +49,49 @@ async function loadOrders() {
   let todayTotal = 0;
   let todayCount = 0;
 
-  for (const order of orders) {
+  orders.forEach(order => {
 
     const orderDate = new Date(order.created_at);
-
     if (orderDate >= today) {
       todayTotal += Number(order.total_amount);
       todayCount++;
     }
 
-    const { data: items } = await supabaseClient
-      .from("order_items")
-      .select("*")
-      .eq("order_id", order.id);
+    const items = allItems.filter(i => i.order_id === order.id);
 
     let itemsHtml = "";
+    items.forEach(item => {
+      itemsHtml += "<p class='text-sm'>" +
+                   item.quantity + "x " +
+                   item.item_name +
+                   "</p>";
+    });
 
-    if (items && items.length > 0) {
-      itemsHtml = items.map(item => `
-        <p class="text-sm">
-          ${item.quantity}x ${item.item_name}
-        </p>
-      `).join("");
-    }
+    container.innerHTML +=
+      "<div class='bg-[#1A1A1A] p-5 rounded-xl shadow-lg'>" +
 
-    container.innerHTML += `
-      <div class="bg-[#1A1A1A] p-5 rounded-xl shadow-lg">
-        
-        <div class="flex justify-between items-center mb-2">
-          <h2 class="font-bold text-lg">
-            Table ${order.table_number}
-          </h2>
+        "<div class='flex justify-between items-center mb-2'>" +
+          "<h2 class='font-bold text-lg'>Table " + order.table_number + "</h2>" +
 
-          <select 
-            onchange="updateStatus('${order.id}', this.value)"
-            class="bg-[#2A2A2A] px-3 py-1 rounded">
-            
-            <option value="pending" ${order.status==='pending'?'selected':''}>Pending</option>
-            <option value="preparing" ${order.status==='preparing'?'selected':''}>Preparing</option>
-            <option value="completed" ${order.status==='completed'?'selected':''}>Completed</option>
-          </select>
-        </div>
+          "<select onchange=\"updateStatus('" + order.id + "', this.value)\" class='bg-[#2A2A2A] px-3 py-1 rounded'>" +
+            "<option value='pending' " + (order.status==="pending"?"selected":"") + ">Pending</option>" +
+            "<option value='preparing' " + (order.status==="preparing"?"selected":"") + ">Preparing</option>" +
+            "<option value='completed' " + (order.status==="completed"?"selected":"") + ">Completed</option>" +
+          "</select>" +
+        "</div>" +
 
-        ${itemsHtml}
+        itemsHtml +
 
-        <p class="mt-3 font-bold text-[#A8E63D]">
-          ₹${order.total_amount}
-        </p>
+        "<p class='mt-3 font-bold text-[#A8E63D]'>₹" + order.total_amount + "</p>" +
 
-        <button 
-          onclick="deleteOrder('${order.id}')"
-          class="mt-3 bg-red-600 px-3 py-1 rounded text-sm">
-          Delete
-        </button>
+        "<button onclick=\"deleteOrder('" + order.id + "')\" class='mt-3 bg-red-600 px-3 py-1 rounded text-sm'>Delete</button>" +
 
-      </div>
-    `;
-  }
+      "</div>";
+  });
 
   document.getElementById("today-summary").innerText =
-  "Today's Orders: " + todayCount +
-  " | Total Sales: ₹" + todayTotal;
+    "Today's Orders: " + todayCount +
+    " | Total Sales: ₹" + todayTotal;
 }
 
 // Update Status
@@ -147,55 +100,42 @@ async function updateStatus(id, status) {
     .from("orders")
     .update({ status: status })
     .eq("id", id);
-
   loadOrders();
 }
 
 // Delete Order
 async function deleteOrder(id) {
-
   if (!confirm("Delete this order?")) return;
 
-  await supabaseClient
-    .from("order_items")
-    .delete()
-    .eq("order_id", id);
-
-  await supabaseClient
-    .from("orders")
-    .delete()
-    .eq("id", id);
+  await supabaseClient.from("order_items").delete().eq("order_id", id);
+  await supabaseClient.from("orders").delete().eq("id", id);
 
   loadOrders();
 }
 
-// Download Today CSV
+// Download CSV
 async function downloadToday() {
 
   const today = new Date();
   today.setHours(0,0,0,0);
 
-  const response = await supabaseClient
+  const { data } = await supabaseClient
     .from("orders")
     .select("*");
-
-  const data = response.data;
 
   if (!data) return;
 
   let csv = "Table,Total,Status,Date\n";
 
-  for (let i = 0; i < data.length; i++) {
-
-    const orderDate = new Date(data[i].created_at);
-
+  data.forEach(order => {
+    const orderDate = new Date(order.created_at);
     if (orderDate >= today) {
-      csv += data[i].table_number + "," +
-             data[i].total_amount + "," +
-             data[i].status + "," +
-             data[i].created_at + "\n";
+      csv += order.table_number + "," +
+             order.total_amount + "," +
+             order.status + "," +
+             order.created_at + "\n";
     }
-  }
+  });
 
   const blob = new Blob([csv], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
@@ -206,8 +146,10 @@ async function downloadToday() {
   a.click();
 }
 
-// Auto Refresh Every 5 sec
-setInterval(loadOrders, 5000);
+// Safe auto refresh (no spam)
+setInterval(() => {
+  loadOrders();
+}, 7000);
 
 loadOrders();
 </script>
