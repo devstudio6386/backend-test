@@ -4,92 +4,59 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Zixy Bite - Digital Menu</title>
-  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-  
+  <script src="https://cdn.tailwindcss.com"></script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+
   <style>
     html, body { height: 100%; margin: 0; }
     * { font-family: 'Inter', sans-serif; }
-    h1, h2, h3, h4, h5, h6, .font-heading { font-family: 'Poppins', sans-serif; }
-    
+    h1, h2 { font-family: 'Poppins', sans-serif; }
+
     .hide-scrollbar::-webkit-scrollbar { display: none; }
     .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    
+
     .category-pill { transition: all 0.3s ease; }
-    .category-pill.active { background: #A8E63D; color: #0D0D0D; box-shadow: 0 0 20px rgba(168, 230, 61, 0.4); }
-    
-    .menu-card { transition: all 0.3s ease; }
-    .menu-card:hover { transform: translateY(-4px); box-shadow: 0 8px 30px rgba(168, 230, 61, 0.15); }
-    
-    .fade-in { animation: fadeIn 0.3s ease-out; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    
-    .glow-effect { box-shadow: 0 0 30px rgba(168, 230, 61, 0.3); }
-    
-    .dish-image { 
-      width: 100%; 
-      height: 160px; 
-      background: linear-gradient(135deg, #2A2A2A 0%, #1A1A1A 100%);
-      border-radius: 12px 12px 0 0;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .category-pill.active {
+      background: #A8E63D;
+      color: #0D0D0D;
+      box-shadow: 0 0 20px rgba(168, 230, 61, 0.4);
     }
-    
-    .dish-image img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
+
+    .menu-card { transition: all 0.3s ease; }
+    .menu-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 30px rgba(168, 230, 61, 0.15);
     }
   </style>
 </head>
+
 <body class="h-full bg-[#0D0D0D] text-white overflow-auto">
-  <div id="app" class="w-full min-h-full max-w-2xl mx-auto relative">
-    
-    <!-- Sticky Header -->
-    <header class="sticky top-0 z-50 bg-[#0D0D0D]/95 backdrop-blur-md border-b border-[#2A2A2A] px-4 py-4">
-      <div class="flex items-center gap-3">
-        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-[#A8E63D] to-[#7BC62D] flex items-center justify-center glow-effect">
-          <span class="text-2xl">🍽️</span>
-        </div>
-        <div>
-          <h1 id="header-name" class="font-heading font-bold text-xl text-white leading-tight">Zixy Bite</h1>
-          <p id="header-tagline" class="text-xs text-[#888888]">Delicious Food, Delivered Hot</p>
-        </div>
-      </div>
-    </header>
-    
-    <!-- Search Bar -->
-    <div class="sticky top-16 z-40 bg-[#0D0D0D]/95 backdrop-blur-md px-4 py-3 border-b border-[#2A2A2A]">
-      <div class="relative">
-        <span class="absolute left-3 top-3 text-[#888888]">🔍</span>
-        <input 
-          type="text" 
-          id="search-input" 
-          placeholder="Search dishes..." 
-          class="w-full pl-10 pr-4 py-2 rounded-lg bg-[#1A1A1A] border border-[#2A2A2A] text-white placeholder-[#888888] focus:outline-none focus:border-[#A8E63D] transition-all"
-        >
-      </div>
-    </div>
-    
-    <!-- Category Pills (Sticky) -->
-    <nav class="sticky top-28 z-40 bg-[#0D0D0D]/95 backdrop-blur-md py-3 px-4 border-b border-[#2A2A2A]">
-      <div id="category-pills" class="flex gap-2 overflow-x-auto hide-scrollbar">
-        <!-- Pills injected by JS -->
-      </div>
-    </nav>
-    
-    <!-- Menu Sections -->
-    <main id="menu-container" class="px-4 py-6 space-y-8">
-      <!-- Menu sections injected by JS -->
-    </main>
-    
-  </div>
+<div class="w-full min-h-full max-w-2xl mx-auto relative">
 
+<header class="sticky top-0 z-50 bg-[#0D0D0D]/95 backdrop-blur-md border-b border-[#2A2A2A] px-4 py-4">
+  <h1 class="font-bold text-xl">Zixy Bite</h1>
+  <p class="text-xs text-gray-400">Delicious Food, Delivered Hot</p>
+</header>
 
+<div class="sticky top-16 z-40 bg-[#0D0D0D]/95 px-4 py-3 border-b border-[#2A2A2A]">
+  <input 
+    type="text" 
+    id="search-input"
+    placeholder="Search dishes..."
+    class="w-full px-4 py-2 rounded-lg bg-[#1A1A1A] border border-[#2A2A2A] text-white focus:outline-none focus:border-[#A8E63D]"
+  >
+</div>
+
+<nav class="sticky top-28 z-40 bg-[#0D0D0D]/95 py-3 px-4 border-b border-[#2A2A2A]">
+  <div id="category-pills" class="flex gap-2 overflow-x-auto hide-scrollbar"></div>
+</nav>
+
+<main id="menu-container" class="px-4 py-6 grid grid-cols-1 gap-6"></main>
+
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -99,43 +66,86 @@ const supabaseClient = supabase.createClient(
   "sb_publishable_4_CsTkcZtuVeFxMSpjR8mQ_NpZaGkWX"
 );
 
-console.log("Connected:", supabaseClient);
+let allData = [];
+let activeCategory = "All";
+let searchQuery = "";
 
-
-async function loadMenu(category = "All") {
-
-  let query = supabaseClient
+// Load Data
+async function loadMenu() {
+  const { data, error } = await supabaseClient
     .from("menu")
     .select("*");
-
-  if (category !== "All") {
-    query = query.eq("category", category);
-  }
-
-  const { data, error } = await query;
 
   if (error) {
     console.error(error);
     return;
   }
 
-  const container = document.getElementById("menu-container");
-  container.innerHTML = "";
-
-  data.forEach(item => {
-    container.innerHTML += `
-      <div class="bg-[#1e203b] rounded-xl overflow-hidden">
-        <img src="${item.image}" class="w-full h-52 object-cover">
-        <div class="p-4">
-          <h2 class="text-lg font-semibold">${item.name}</h2>
-          <p class="text-yellow-400 font-bold">₹${item.price}</p>
-        </div>
-      </div>
-    `;
-  });
+  allData = data;
+  renderCategories();
+  renderMenu();
 }
+
+function renderCategories() {
+  const container = document.getElementById("category-pills");
+
+  const categories = [
+    "All",
+    ...new Set(allData.map(item => item.category))
+  ];
+
+  container.innerHTML = categories.map(cat => `
+    <button 
+      onclick="filterCategory('${cat}')"
+      class="category-pill px-4 py-2 rounded-full text-sm whitespace-nowrap
+      ${activeCategory === cat 
+        ? 'active' 
+        : 'bg-[#1A1A1A] border border-[#2A2A2A] text-white'}">
+      ${cat}
+    </button>
+  `).join("");
+}
+
+function filterCategory(category) {
+  activeCategory = category;
+  renderCategories();
+  renderMenu();
+}
+
+function renderMenu() {
+  const container = document.getElementById("menu-container");
+
+  let filtered = activeCategory === "All"
+    ? allData
+    : allData.filter(item => item.category === activeCategory);
+
+  if (searchQuery) {
+    filtered = filtered.filter(item =>
+      item.name.toLowerCase().includes(searchQuery)
+    );
+  }
+
+  container.innerHTML = filtered.map(item => `
+    <div class="menu-card bg-[#1A1A1A] rounded-xl overflow-hidden">
+      <img src="${item.image}" 
+           class="w-full h-52 object-cover">
+      <div class="p-4">
+        <h2 class="text-lg font-semibold">${item.name}</h2>
+        <p class="text-[#A8E63D] font-bold text-lg">₹${item.price}</p>
+      </div>
+    </div>
+  `).join("");
+}
+
+// Search
+document.getElementById("search-input")
+  .addEventListener("input", (e) => {
+    searchQuery = e.target.value.toLowerCase();
+    renderMenu();
+});
 
 loadMenu();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9cfa4cc4616f0186',t:'MTc3MTM4Mzg5Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+
+</body>
 </html>
