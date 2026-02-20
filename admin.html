@@ -1,15 +1,53 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <title>Admin Login</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      background: #0D0D0D;
+      color: white;
+      font-family: Arial;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .login-box {
+      background: #1A1A1A;
+      padding: 30px;
+      border-radius: 10px;
+      width: 300px;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      background: #222;
+      border: 1px solid #333;
+      color: white;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 15px;
+      background: #A8E63D;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
 </head>
+
 <body>
 
-<h2>Admin Login</h2>
+<div class="login-box">
+  <h2>Admin Login</h2>
 
-<input type="email" id="email" placeholder="Email">
-<input type="password" id="password" placeholder="Password">
-<button onclick="login()">Login</button>
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Password">
+  <button onclick="login()">Login</button>
+</div>
 
 <script>
 const supabaseClient = supabase.createClient(
@@ -17,21 +55,27 @@ const supabaseClient = supabase.createClient(
   "sb_publishable_4_CsTkcZtuVeFxMSpjR8mQ_NpZaGkWX"
 );
 
+// Agar already login hai to direct index pe bhej do
+supabaseClient.auth.getUser().then(({ data }) => {
+  if (data.user) {
+    window.location.href = "index.html";
+  }
+});
+
 async function login() {
 
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
   const { data, error } = await supabaseClient.auth.signInWithPassword({
-    email: email,
-    password: password
+    email,
+    password
   });
 
   if (error) {
     alert("Login Failed");
     console.log(error);
   } else {
-    alert("Login Success");
     window.location.href = "index.html";
   }
 }

@@ -1,44 +1,46 @@
 <!DOCTYPE html>
 <html lang="en" class="h-full">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zixy Bite - Digital Menu</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zixy Bite - Digital Menu</title>
+<script src="https://cdn.tailwindcss.com"></script>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
 
-  <style>
-    html, body { height: 100%; margin: 0; }
-    * { font-family: 'Inter', sans-serif; }
-    h1, h2 { font-family: 'Poppins', sans-serif; }
+<style>
+html, body { height: 100%; margin: 0; }
+* { font-family: 'Inter', sans-serif; }
+h1, h2 { font-family: 'Poppins', sans-serif; }
 
-    .hide-scrollbar::-webkit-scrollbar { display: none; }
-    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.category-pill { transition: all 0.3s ease; }
+.category-pill.active {
+  background: #A8E63D;
+  color: #0D0D0D;
+}
 
-    .category-pill { transition: all 0.3s ease; }
-    .category-pill.active {
-      background: #A8E63D;
-      color: #0D0D0D;
-      box-shadow: 0 0 20px rgba(168, 230, 61, 0.4);
-    }
-
-    .menu-card { transition: all 0.3s ease; }
-    .menu-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 30px rgba(168, 230, 61, 0.15);
-    }
-  </style>
+.menu-card { transition: all 0.3s ease; }
+.menu-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(168, 230, 61, 0.15);
+}
+</style>
 </head>
 
 <body class="h-full bg-[#0D0D0D] text-white overflow-auto">
+
 <div class="w-full min-h-full max-w-2xl mx-auto relative">
 
-<header class="sticky top-0 z-50 bg-[#0D0D0D]/95 backdrop-blur-md border-b border-[#2A2A2A] px-4 py-4">
-  <h1 class="font-bold text-xl">Zixy Bite</h1>
-  <p class="text-xs text-gray-400">Delicious Food, Delivered Hot</p>
+<header class="sticky top-0 z-50 bg-[#0D0D0D]/95 border-b border-[#2A2A2A] px-4 py-4 flex items-center">
+  <div>
+    <h1 class="font-bold text-xl">Zixy Bite</h1>
+    <p class="text-xs text-gray-400">Delicious Food, Delivered Hot</p>
+  </div>
+  <button onclick="logout()" class="ml-auto bg-red-500 px-3 py-1 rounded text-sm">
+    Logout
+  </button>
 </header>
 
 <div class="sticky top-16 z-40 bg-[#0D0D0D]/95 px-4 py-3 border-b border-[#2A2A2A]">
@@ -51,7 +53,7 @@
 </div>
 
 <nav class="sticky top-28 z-40 bg-[#0D0D0D]/95 py-3 px-4 border-b border-[#2A2A2A]">
-  <div id="category-pills" class="flex gap-2 overflow-x-auto hide-scrollbar"></div>
+  <div id="category-pills" class="flex gap-2 overflow-x-auto"></div>
 </nav>
 
 <main id="menu-container" class="px-4 py-6 grid grid-cols-1 gap-6"></main>
@@ -66,11 +68,23 @@ const supabaseClient = supabase.createClient(
   "sb_publishable_4_CsTkcZtuVeFxMSpjR8mQ_NpZaGkWX"
 );
 
+// 🔐 LOGIN CHECK (IMPORTANT)
+supabaseClient.auth.getUser().then(({ data }) => {
+  if (!data.user) {
+    window.location.href = "admin.html";
+  }
+});
+
+async function logout() {
+  await supabaseClient.auth.signOut();
+  window.location.href = "admin.html";
+}
+
 let allData = [];
 let activeCategory = "All";
 let searchQuery = "";
 
-// Load Data
+// Load Menu
 async function loadMenu() {
   const { data, error } = await supabaseClient
     .from("menu")
@@ -127,8 +141,7 @@ function renderMenu() {
 
   container.innerHTML = filtered.map(item => `
     <div class="menu-card bg-[#1A1A1A] rounded-xl overflow-hidden">
-      <img src="${item.image}" 
-           class="w-full h-52 object-cover">
+      <img src="${item.image}" class="w-full h-52 object-cover">
       <div class="p-4">
         <h2 class="text-lg font-semibold">${item.name}</h2>
         <p class="text-[#A8E63D] font-bold text-lg">₹${item.price}</p>
@@ -137,7 +150,6 @@ function renderMenu() {
   `).join("");
 }
 
-// Search
 document.getElementById("search-input")
   .addEventListener("input", (e) => {
     searchQuery = e.target.value.toLowerCase();
