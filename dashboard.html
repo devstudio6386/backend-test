@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body {
+      background: #0D0D0D;
+      color: white;
+      font-family: Arial;
+      padding: 20px;
+      max-width: 600px;
+      margin: auto;
+    }
+
+    h2, h3 { margin-top: 20px; }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 8px;
+      background: #1A1A1A;
+      border: 1px solid #333;
+      color: white;
+      border-radius: 5px;
+    }
+
+    button {
+      padding: 10px;
+      margin-top: 10px;
+      cursor: pointer;
+      border-radius: 5px;
+      border: none;
+    }
+
+    .add-btn {
+      background: #A8E63D;
+      font-weight: bold;
+    }
+
+    .delete-btn {
+      background: red;
+      color: white;
+      margin-top: 5px;
+    }
+
+    .logout-btn {
+      background: #444;
+      color: white;
+      float: right;
+    }
+
+    .card {
+      background: #1A1A1A;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+
+<body>
+
+<h2>Admin Dashboard</h2>
+<button class="logout-btn" onclick="logout()">Logout</button>
+
+<h3>Add New Dish</h3>
+
+<input type="text" id="name" placeholder="Dish Name">
+<input type="text" id="category" placeholder="Category (Example: Burger)">
+<input type="number" id="price" placeholder="Price">
+<input type="text" id="image" placeholder="Image URL">
+
+<button class="add-btn" onclick="addDish()">Add Dish</button>
+
+<h3>All Dishes</h3>
+<div id="dish-list"></div>
+
+<script>
+const supabaseClient = supabase.createClient(
+  "https://pxdzdwljccgdruzaqhlt.supabase.co",
+  "sb_publishable_4_CsTkcZtuVeFxMSpjR8mQ_NpZaGkWX"
+);
+
+// 🔐 Protect page
+supabaseClient.auth.getUser().then(({ data }) => {
+  if (!data.user) {
+    window.location.href = "admin.html";
+  }
+});
+
+async function logout() {
+  await supabaseClient.auth.signOut();
+  window.location.href = "admin.html";
+}
+
+async function loadDishes() {
+  const { data, error } = await supabaseClient
+    .from("menu")
+    .select("*")
+    .order("id", { ascending: false });
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  const container = document.getElementById("dish-list");
+  container.innerHTML = "";
+
+  data.forEach(item => {
+    container.innerHTML += `
+      <div class="card">
+        <strong>${item.name}</strong> 
+        <br>Category: ${item.category}
+        <br>Price: ₹${item.price}
+        <br>
+        <button class="delete-btn" onclick="deleteDish(${item.id})">
+          Delete
+        </button>
+      </div>
+    `;
+  });
+}
+
+async function addDish() {
+  const name = document.getElementById("name").value;
+  const category = document.getElementById("category").value;
+  const price = document.getElementById("price").value;
+  const image = document.getElementById("image").value;
+
+  if (!name || !category || !price || !image) {
+    alert("Fill all fields");
+    return;
+  }
+
+  const { error } = await supabaseClient
+    .from("menu")
+    .insert([{ name, category, price, image }]);
+
+  if (error) {
+    alert("Error adding dish");
+    console.log(error);
+  } else {
+    alert("Dish Added");
+    document.getElementById("name").value = "";
+    document.getElementById("category").value = "";
+    document.getElementById("price").value = "";
+    document.getElementById("image").value = "";
+    loadDishes();
+  }
+}
+
+async function deleteDish(id) {
+  const { error } = await supabaseClient
+    .from("menu")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    alert("Error deleting");
+  } else {
+    loadDishes();
+  }
+}
+
+loadDishes();
+</script>
+
+</body>
+</html>
