@@ -91,30 +91,33 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
-<script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
-const supabaseUrl = "https://wvjedqmndwkxjhosczor.supabase.co";
-const supabaseKey = "sb_publishable_PX7EsdgKigtO-kCbRQbAxg_ay-id-LK";
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+<script>
+const supabase = window.supabase.createClient(
+  "https://wvjedqmnndwkxjhosczor.supabase.co",
+  "sb_publishable_PX7EsdgKigtO-kCbRQbAxg_ay-id-LK"
+);
 
 let menuData = [];
 let activeCategory = "All";
 let searchQuery = "";
 
-document.getElementById('search-input').addEventListener('input', (e) => {
+// Search input
+document.getElementById("search-input").addEventListener("input", (e) => {
   searchQuery = e.target.value.toLowerCase();
   renderMenu();
 });
 
+// Load menu from Supabase
 async function loadMenu() {
-
   const { data, error } = await supabase
     .from("menu_items")
     .select("*")
     .eq("is_available", true);
 
-  if(error){
-    console.log(error);
+  if (error) {
+    console.log("Supabase Error:", error);
     return;
   }
 
@@ -130,7 +133,6 @@ async function loadMenu() {
 
   menuData = Object.keys(grouped).map(cat => ({
     category: cat,
-    emoji: "🍽️",
     items: grouped[cat]
   }));
 
@@ -138,18 +140,19 @@ async function loadMenu() {
   renderMenu();
 }
 
+// Render category pills
 function renderCategoryPills() {
-  const container = document.getElementById('category-pills');
+  const container = document.getElementById("category-pills");
   const categories = ["All", ...menuData.map(c => c.category)];
 
   container.innerHTML = categories.map(cat => `
     <button class="category-pill px-4 py-2 rounded-full text-sm border border-[#2A2A2A] bg-[#1A1A1A] ${activeCategory === cat ? 'active' : ''}" data-category="${cat}">
       ${cat}
     </button>
-  `).join('');
+  `).join("");
 
-  container.querySelectorAll('.category-pill').forEach(btn => {
-    btn.addEventListener('click', () => {
+  container.querySelectorAll(".category-pill").forEach(btn => {
+    btn.addEventListener("click", () => {
       activeCategory = btn.dataset.category;
       renderCategoryPills();
       renderMenu();
@@ -157,15 +160,15 @@ function renderCategoryPills() {
   });
 }
 
+// Render menu
 function renderMenu() {
-
-  const container = document.getElementById('menu-container');
+  const container = document.getElementById("menu-container");
 
   let filtered = activeCategory === "All"
     ? menuData
     : menuData.filter(c => c.category === activeCategory);
 
-  if(searchQuery){
+  if (searchQuery) {
     filtered = filtered.map(category => ({
       ...category,
       items: category.items.filter(item =>
@@ -190,14 +193,14 @@ function renderMenu() {
               <p class="text-[#A8E63D] font-bold text-lg mt-2">₹${item.price}</p>
             </div>
           </div>
-        `).join('')}
+        `).join("")}
       </div>
     </section>
-  `).join('');
+  `).join("");
 }
 
+// Init
 loadMenu();
-
 </script>
 <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9cfa4cc4616f0186',t:'MTc3MTM4Mzg5Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
