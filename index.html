@@ -55,6 +55,10 @@ h1, h2 { font-family: 'Poppins', sans-serif; }
 
 </div>
 
+<div id="cart-container"
+     class="fixed bottom-0 left-0 w-full bg-[#111] p-4 shadow-lg z-50">
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
@@ -68,11 +72,9 @@ let activeCategory = "All";
 let searchQuery = "";
 let cart = [];
 
-// 🪑 Detect Table Number
 const params = new URLSearchParams(window.location.search);
 const tableNumber = params.get("table") || "Unknown";
 
-// 🔥 Load Menu
 async function loadMenu() {
   const { data, error } = await supabaseClient
     .from("menu")
@@ -88,7 +90,6 @@ async function loadMenu() {
   renderMenu();
 }
 
-// 🔥 Render Categories
 function renderCategories() {
   const container = document.getElementById("category-pills");
 
@@ -115,7 +116,6 @@ function filterCategory(category) {
   renderMenu();
 }
 
-// 🔥 Render Menu
 function renderMenu() {
   const container = document.getElementById("menu-container");
 
@@ -136,7 +136,7 @@ function renderMenu() {
         <h2 class="text-lg font-semibold">${item.name}</h2>
         <p class="text-[#A8E63D] font-bold text-lg">₹${item.price}</p>
         <button 
-          onclick="addToCart('${item.id}')"
+          onclick="addToCart(${item.id})"
           class="mt-3 w-full bg-[#A8E63D] text-black py-2 rounded-lg font-semibold">
           Add to Cart
         </button>
@@ -145,11 +145,19 @@ function renderMenu() {
   `).join("");
 }
 
-// 🔥 Add To Cart
+/* ✅ FIXED FUNCTION */
 function addToCart(id) {
-  const item = allData.find(i => i.id === id);
 
-  const existing = cart.find(i => i.id === id);
+  id = Number(id);  // ensure correct type
+
+  const item = allData.find(i => Number(i.id) === id);
+
+  if (!item) {
+    console.error("Item not found");
+    return;
+  }
+
+  const existing = cart.find(i => Number(i.id) === id);
 
   if (existing) {
     existing.qty += 1;
@@ -165,7 +173,6 @@ function addToCart(id) {
   renderCart();
 }
 
-// 🔥 Render Cart
 function renderCart() {
   const container = document.getElementById("cart-container");
 
@@ -201,7 +208,6 @@ function renderCart() {
   `;
 }
 
-// 🔥 Place Order
 async function placeOrder(total) {
   if (cart.length === 0) return alert("Cart is empty");
 
@@ -237,7 +243,6 @@ async function placeOrder(total) {
   renderCart();
 }
 
-// 🔔 Call Waiter
 async function callWaiter() {
   await supabaseClient.from("waiter_calls").insert([
     {
@@ -249,7 +254,6 @@ async function callWaiter() {
   alert("Waiter has been called!");
 }
 
-// 🔎 Search
 document.getElementById("search-input")
   .addEventListener("input", (e) => {
     searchQuery = e.target.value.toLowerCase();
