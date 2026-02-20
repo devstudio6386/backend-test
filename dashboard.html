@@ -1,78 +1,40 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Dashboard</title>
+<title>Zixy Admin Dashboard</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
-<body class="min-h-screen bg-[#0D0D0D] text-white px-4 py-6">
+<body class="bg-[#0D0D0D] text-white min-h-screen p-6">
 
-<div class="max-w-xl mx-auto">
+<div class="max-w-6xl mx-auto">
 
-<!-- Header -->
-<div class="flex justify-between items-center mb-6">
-  <h1 class="text-2xl font-bold">Admin Dashboard</h1>
-  <button onclick="logout()" 
-    class="px-4 py-2 bg-red-500 rounded-lg text-white font-semibold">
-    Logout
-  </button>
-</div>
-
-<!-- 🔥 Stats -->
-<div class="grid grid-cols-2 gap-4 mb-8">
-  <div class="bg-[#1A1A1A] p-4 rounded-xl">
-    <p class="text-gray-400 text-sm">Orders Today</p>
-    <h2 id="total-orders" class="text-2xl font-bold">0</h2>
-  </div>
-  <div class="bg-[#1A1A1A] p-4 rounded-xl">
-    <p class="text-gray-400 text-sm">Revenue Today</p>
-    <h2 id="total-revenue" class="text-2xl font-bold">₹0</h2>
+<!-- HEADER -->
+<div class="flex justify-between items-center mb-8">
+  <h1 class="text-3xl font-bold">Zixy Bite Admin</h1>
+  <div class="flex gap-3">
+    <button onclick="downloadToday()"
+      class="bg-blue-600 px-4 py-2 rounded-lg">
+      Download Today
+    </button>
+    <button onclick="logout()"
+      class="bg-red-600 px-4 py-2 rounded-lg">
+      Logout
+    </button>
   </div>
 </div>
 
-<!-- 📦 Live Orders -->
-<div class="mb-10">
-  <h2 class="text-lg font-semibold mb-4">Live Orders</h2>
-  <div id="orders-list" class="space-y-4"></div>
+<!-- TODAY TOTAL -->
+<div id="today-summary"
+     class="mb-6 text-xl font-semibold text-[#A8E63D]">
 </div>
 
-<!-- 🔔 Waiter Calls -->
-<div class="mb-10">
-  <h2 class="text-lg font-semibold mb-4">Waiter Calls</h2>
-  <div id="waiter-list" class="space-y-4"></div>
-</div>
-
-<!-- 🍽 Add Dish Form -->
-<div class="bg-[#1A1A1A] p-5 rounded-xl mb-8">
-  <h2 class="text-lg font-semibold mb-4">Add New Dish</h2>
-
-  <input id="name" placeholder="Dish Name"
-    class="w-full mb-3 px-4 py-3 rounded-lg bg-[#2A2A2A]">
-
-  <input id="category" placeholder="Category"
-    class="w-full mb-3 px-4 py-3 rounded-lg bg-[#2A2A2A]">
-
-  <input id="price" placeholder="Price"
-    class="w-full mb-3 px-4 py-3 rounded-lg bg-[#2A2A2A]">
-
-  <input id="image" placeholder="Image URL"
-    class="w-full mb-4 px-4 py-3 rounded-lg bg-[#2A2A2A]">
-
-  <button id="submitBtn" onclick="addDish()"
-    class="w-full py-3 bg-[#A8E63D] text-black font-bold rounded-lg">
-    Add Dish
-  </button>
-</div>
-
-<!-- Dish List -->
-<div>
-  <h2 class="text-lg font-semibold mb-4">All Dishes</h2>
-  <div id="dish-list" class="space-y-4"></div>
-</div>
+<!-- ORDERS -->
+<div id="orders-container" class="space-y-6"></div>
 
 </div>
 
@@ -82,184 +44,172 @@ const supabaseClient = supabase.createClient(
   "sb_publishable_4_CsTkcZtuVeFxMSpjR8mQ_NpZaGkWX"
 );
 
-let editId = null;
-
-// Protect dashboard
+// Protect Page
 supabaseClient.auth.getUser().then(({ data }) => {
-  if (!data.user) window.location.href = "admin.html";
+  if (!data.user) {
+    window.location.href = "admin.html";
+  }
 });
 
-// =====================
-// LOAD STATS
-// =====================
-async function loadStats() {
-  const today = new Date().toISOString().split("T")[0];
-
-  const { data } = await supabaseClient
-    .from("orders")
-    .select("*")
-    .gte("created_at", today);
-
-  if (!data) return;
-
-  const totalOrders = data.length;
-  const totalRevenue = data.reduce((sum, o) => sum + o.total_amount, 0);
-
-  document.getElementById("total-orders").innerText = totalOrders;
-  document.getElementById("total-revenue").innerText = "₹" + totalRevenue;
-}
-
-// =====================
-// LOAD ORDERS
-// =====================
+// Load Orders
 async function loadOrders() {
-  const { data } = await supabaseClient
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  const { data: orders, error } = await supabaseClient
     .from("orders")
     .select("*")
-    .order("id", { ascending: false });
+    .order("created_at", { ascending: false });
 
-  const container = document.getElementById("orders-list");
-
-  if (!data) return;
-
-  container.innerHTML = data.map(order => `
-    <div class="bg-[#1A1A1A] p-4 rounded-xl">
-      <h3 class="font-bold mb-2">Table ${order.table_number}</h3>
-      <p class="text-[#A8E63D] font-semibold mb-2">₹${order.total_amount}</p>
-      <p class="text-sm mb-3">Status: ${order.status}</p>
-      <div class="flex gap-2">
-        <button onclick="updateStatus('${order.id}','preparing')" 
-          class="px-3 py-1 bg-blue-500 rounded">Preparing</button>
-        <button onclick="updateStatus('${order.id}','served')" 
-          class="px-3 py-1 bg-green-500 rounded">Served</button>
-      </div>
-    </div>
-  `).join("");
-}
-
-async function updateStatus(id, status) {
-  await supabaseClient.from("orders").update({ status }).eq("id", id);
-  loadOrders();
-}
-
-// =====================
-// LOAD WAITER CALLS
-// =====================
-async function loadWaiterCalls() {
-  const { data } = await supabaseClient
-    .from("waiter_calls")
-    .select("*")
-    .eq("status", "pending")
-    .order("id", { ascending: false });
-
-  const container = document.getElementById("waiter-list");
-
-  if (!data) return;
-
-  container.innerHTML = data.map(call => `
-    <div class="bg-[#1A1A1A] p-4 rounded-xl">
-      <h3 class="font-bold">Table ${call.table_number}</h3>
-      <button onclick="resolveCall('${call.id}')"
-        class="mt-2 px-3 py-1 bg-green-500 rounded">
-        Mark Resolved
-      </button>
-    </div>
-  `).join("");
-}
-
-async function resolveCall(id) {
-  await supabaseClient
-    .from("waiter_calls")
-    .update({ status: "resolved" })
-    .eq("id", id);
-  loadWaiterCalls();
-}
-
-// =====================
-// DISH CRUD
-// =====================
-async function addDish() {
-  const name = document.getElementById("name").value;
-  const category = document.getElementById("category").value;
-  const price = document.getElementById("price").value;
-  const image = document.getElementById("image").value;
-
-  if (!name || !category || !price || !image) return alert("Fill all fields");
-
-  if (editId) {
-    await supabaseClient.from("menu")
-      .update({ name, category, price, image })
-      .eq("id", editId);
-    editId = null;
-    document.getElementById("submitBtn").innerText = "Add Dish";
-  } else {
-    await supabaseClient.from("menu")
-      .insert([{ name, category, price, image }]);
+  if (error) {
+    console.error(error);
+    return;
   }
 
-  document.getElementById("name").value = "";
-  document.getElementById("category").value = "";
-  document.getElementById("price").value = "";
-  document.getElementById("image").value = "";
+  const container = document.getElementById("orders-container");
+  container.innerHTML = "";
 
-  loadDishes();
+  if (!orders || orders.length === 0) {
+    container.innerHTML = "<p>No Orders Yet</p>";
+    return;
+  }
+
+  let todayTotal = 0;
+  let todayCount = 0;
+
+  for (const order of orders) {
+
+    const orderDate = new Date(order.created_at);
+
+    if (orderDate >= today) {
+      todayTotal += Number(order.total_amount);
+      todayCount++;
+    }
+
+    const { data: items } = await supabaseClient
+      .from("order_items")
+      .select("*")
+      .eq("order_id", order.id);
+
+    let itemsHtml = "";
+
+    if (items && items.length > 0) {
+      itemsHtml = items.map(item => `
+        <p class="text-sm">
+          ${item.quantity}x ${item.item_name}
+        </p>
+      `).join("");
+    }
+
+    container.innerHTML += `
+      <div class="bg-[#1A1A1A] p-5 rounded-xl shadow-lg">
+        
+        <div class="flex justify-between items-center mb-2">
+          <h2 class="font-bold text-lg">
+            Table ${order.table_number}
+          </h2>
+
+          <select 
+            onchange="updateStatus('${order.id}', this.value)"
+            class="bg-[#2A2A2A] px-3 py-1 rounded">
+            
+            <option value="pending" ${order.status==='pending'?'selected':''}>Pending</option>
+            <option value="preparing" ${order.status==='preparing'?'selected':''}>Preparing</option>
+            <option value="completed" ${order.status==='completed'?'selected':''}>Completed</option>
+          </select>
+        </div>
+
+        ${itemsHtml}
+
+        <p class="mt-3 font-bold text-[#A8E63D]">
+          ₹${order.total_amount}
+        </p>
+
+        <button 
+          onclick="deleteOrder('${order.id}')"
+          class="mt-3 bg-red-600 px-3 py-1 rounded text-sm">
+          Delete
+        </button>
+
+      </div>
+    `;
+  }
+
+  document.getElementById("today-summary").innerText =
+  "Today's Orders: " + todayCount +
+  " | Total Sales: ₹" + todayTotal;
 }
 
-async function loadDishes() {
-  const { data } = await supabaseClient
-    .from("menu")
-    .select("*")
-    .order("id", { ascending: false });
+// Update Status
+async function updateStatus(id, status) {
+  await supabaseClient
+    .from("orders")
+    .update({ status: status })
+    .eq("id", id);
 
-  const container = document.getElementById("dish-list");
+  loadOrders();
+}
+
+// Delete Order
+async function deleteOrder(id) {
+
+  if (!confirm("Delete this order?")) return;
+
+  await supabaseClient
+    .from("order_items")
+    .delete()
+    .eq("order_id", id);
+
+  await supabaseClient
+    .from("orders")
+    .delete()
+    .eq("id", id);
+
+  loadOrders();
+}
+
+// Download Today CSV
+async function downloadToday() {
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  const response = await supabaseClient
+    .from("orders")
+    .select("*");
+
+  const data = response.data;
+
   if (!data) return;
 
-  container.innerHTML = data.map(item => `
-    <div class="bg-[#1A1A1A] p-4 rounded-xl">
-      <h3 class="font-bold">${item.name}</h3>
-      <p class="text-sm text-gray-400">${item.category}</p>
-      <p class="text-[#A8E63D] font-semibold mb-3">₹${item.price}</p>
-      <div class="flex gap-2">
-        <button onclick="editDish('${item.id}','${item.name}','${item.category}','${item.price}','${item.image}')"
-          class="px-4 py-2 bg-blue-500 rounded-lg text-white">Edit</button>
-        <button onclick="deleteDish('${item.id}')"
-          class="px-4 py-2 bg-red-500 rounded-lg text-white">Delete</button>
-      </div>
-    </div>
-  `).join("");
+  let csv = "Table,Total,Status,Date\n";
+
+  for (let i = 0; i < data.length; i++) {
+
+    const orderDate = new Date(data[i].created_at);
+
+    if (orderDate >= today) {
+      csv += data[i].table_number + "," +
+             data[i].total_amount + "," +
+             data[i].status + "," +
+             data[i].created_at + "\n";
+    }
+  }
+
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "today_orders.csv";
+  a.click();
 }
 
-function editDish(id, name, category, price, image){
-  document.getElementById("name").value = name;
-  document.getElementById("category").value = category;
-  document.getElementById("price").value = price;
-  document.getElementById("image").value = image;
-  editId = id;
-  document.getElementById("submitBtn").innerText = "Update Dish";
-  window.scrollTo({top:0,behavior:"smooth"});
-}
-
-async function deleteDish(id) {
-  await supabaseClient.from("menu").delete().eq("id", id);
-  loadDishes();
-}
-
-async function logout() {
-  await supabaseClient.auth.signOut();
-  window.location.href = "admin.html";
-}
-
-// Auto refresh
-setInterval(() => {
-  loadOrders();
-  loadWaiterCalls();
-  loadStats();
-}, 5000);
+// Auto Refresh Every 5 sec
+setInterval(loadOrders, 5000);
 
 loadOrders();
-loadWaiterCalls();
-loadStats();
-loadDishes();
 </script>
 
 </body>
