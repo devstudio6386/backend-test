@@ -113,10 +113,10 @@ document.getElementById("search-input").addEventListener("input", (e) => {
 
 // Load menu from Supabase
 async function loadMenu() {
-  const { data, error } = await supabase
-    .from("menu_items")
-    .select("*")
-    .eq("is_available", true);
+  await window.supabaseClient
+  .from("menu_items")
+  .select("*")
+  .eq("is_available", true);
 
   if (error) {
     console.log("Supabase Error:", error);
