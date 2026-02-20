@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Zixy Bite - Digital Menu</title>
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-  <script src="/_sdk/element_sdk.js"></script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
@@ -89,14 +89,15 @@
     
   </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
 
-const supabaseUrl = "YOUR_SUPABASE_URL";
-const supabaseKey = "YOUR_PUBLIC_ANON_KEY";
+const supabaseUrl = "https://wvjedqmndwkxjhosczor.supabase.co";
+const supabaseKey = "sb_publishable_PX7EsdgKigtO-kCbRQbAxg_ay-id-LK";
 const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
 let menuData = [];
-let cart = [];
 let activeCategory = "All";
 let searchQuery = "";
 
@@ -106,104 +107,35 @@ document.getElementById('search-input').addEventListener('input', (e) => {
 });
 
 async function loadMenu() {
-  const { data: categories } = await supabase
-    .from("categories")
-    .select("*")
-    .order("created_at");
 
-  const { data: items } = await supabase
+  const { data, error } = await supabase
     .from("menu_items")
     .select("*")
     .eq("is_available", true);
 
-  menuData = categories.map(cat => ({
-    category: cat.name,
-    emoji: cat.emoji,
-    items: items.filter(i => i.category_id === cat.id)
+  if(error){
+    console.log(error);
+    return;
+  }
+
+  // Group by category
+  const grouped = {};
+
+  data.forEach(item => {
+    if (!grouped[item.category]) {
+      grouped[item.category] = [];
+    }
+    grouped[item.category].push(item);
+  });
+
+  menuData = Object.keys(grouped).map(cat => ({
+    category: cat,
+    emoji: "🍽️",
+    items: grouped[cat]
   }));
 
   renderCategoryPills();
   renderMenu();
-}
-
-function addToCart(item) {
-  const existing = cart.find(i => i.id === item.id);
-  if (existing) existing.quantity++;
-  else cart.push({ ...item, quantity: 1 });
-  updateCartUI();
-}
-
-function increaseQty(id) {
-  cart.find(i => i.id === id).quantity++;
-  updateCartUI();
-}
-
-function decreaseQty(id) {
-  const item = cart.find(i => i.id === id);
-  if (item.quantity > 1) item.quantity--;
-  else cart = cart.filter(i => i.id !== id);
-  updateCartUI();
-}
-
-function updateCartUI() {
-  const cartBox = document.getElementById("cart-items");
-  cartBox.innerHTML = "";
-
-  let total = 0;
-
-  cart.forEach(item => {
-    total += item.price * item.quantity;
-
-    cartBox.innerHTML += `
-      <div class="flex justify-between items-center py-2 border-b border-[#2A2A2A]">
-        <span class="text-sm">${item.name}</span>
-        <div class="flex items-center gap-2">
-          <button onclick="decreaseQty('${item.id}')" class="px-2 bg-[#2A2A2A] rounded">-</button>
-          <span>${item.quantity}</span>
-          <button onclick="increaseQty('${item.id}')" class="px-2 bg-[#2A2A2A] rounded">+</button>
-        </div>
-        <span>₹${item.price * item.quantity}</span>
-      </div>
-    `;
-  });
-
-  document.getElementById("total-price").innerText = "₹" + total;
-}
-
-async function placeOrder() {
-
-  if(cart.length === 0){
-    alert("Cart Empty!");
-    return;
-  }
-
-  const name = document.getElementById("customer-name").value;
-  const table = document.getElementById("table-number").value;
-
-  let total = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
-
-  const { data: order } = await supabase
-    .from("orders")
-    .insert([{ customer_name: name, table_number: table, total_amount: total }])
-    .select()
-    .single();
-
-  const orderItems = cart.map(i => ({
-    order_id: order.id,
-    menu_item_id: i.id,
-    quantity: i.quantity,
-    price: i.price
-  }));
-
-  await supabase.from("order_items").insert(orderItems);
-
-  alert("Order Placed Successfully!");
-  cart = [];
-  updateCartUI();
-}
-
-function callWaiter(){
-  alert("Waiter has been notified!");
 }
 
 function renderCategoryPills() {
@@ -226,31 +158,36 @@ function renderCategoryPills() {
 }
 
 function renderMenu() {
+
   const container = document.getElementById('menu-container');
 
   let filtered = activeCategory === "All"
     ? menuData
     : menuData.filter(c => c.category === activeCategory);
 
+  if(searchQuery){
+    filtered = filtered.map(category => ({
+      ...category,
+      items: category.items.filter(item =>
+        item.name.toLowerCase().includes(searchQuery)
+      )
+    })).filter(category => category.items.length > 0);
+  }
+
   container.innerHTML = filtered.map(category => `
-    <section>
+    <section class="fade-in">
       <div class="flex items-center gap-2 mb-4">
-        <span class="text-2xl">${category.emoji}</span>
-        <h2 class="font-heading font-bold text-xl">${category.category}</h2>
+        <h2 class="font-heading font-bold text-2xl">${category.category}</h2>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         ${category.items.map(item => `
           <div class="menu-card bg-[#1A1A1A] rounded-2xl overflow-hidden border border-[#2A2A2A]">
             <div class="dish-image">
-              <img src="${item.image_url}" />
+              <img src="${item.image_url}" loading="lazy">
             </div>
             <div class="p-4">
-              <h3 class="font-bold text-sm">${item.name}</h3>
+              <h3 class="font-heading font-bold text-sm">${item.name}</h3>
               <p class="text-[#A8E63D] font-bold text-lg mt-2">₹${item.price}</p>
-              <button onclick='addToCart(${JSON.stringify(item)})'
-                class="mt-3 w-full bg-[#A8E63D] text-black py-2 rounded-lg font-bold">
-                Add to Cart
-              </button>
             </div>
           </div>
         `).join('')}
