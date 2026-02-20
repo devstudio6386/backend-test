@@ -84,7 +84,6 @@ button:hover{
 
   <div class="error" id="errorMsg"></div>
 </div>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
@@ -98,7 +97,7 @@ const passwordInput = document.getElementById("password");
 const loginBtn = document.getElementById("loginBtn");
 const errorMsg = document.getElementById("errorMsg");
 
-// 🔥 Check Session
+// Check session
 async function checkSession(){
   const { data } = await supabaseClient.auth.getSession();
   if(data.session){
@@ -107,7 +106,7 @@ async function checkSession(){
 }
 checkSession();
 
-// 🔥 Login
+// Login
 loginBtn.onclick = async () => {
 
   const email = emailInput.value.trim();
@@ -118,7 +117,7 @@ loginBtn.onclick = async () => {
     return;
   }
 
-  const { data, error } = await supabaseClient.auth.signInWithPassword({
+  const { error } = await supabaseClient.auth.signInWithPassword({
     email,
     password
   });
@@ -127,23 +126,6 @@ loginBtn.onclick = async () => {
     errorMsg.innerText="Invalid login credentials";
     return;
   }
-
-  // 🔥 Fetch Restaurant Mapping
-  const userId = data.user.id;
-
-  const { data: profile, error: profileError } = await supabaseClient
-    .from("profiles")
-    .select("restaurant_id")
-    .eq("id", userId)
-    .single();
-
-  if(profileError || !profile){
-    errorMsg.innerText="Restaurant not assigned to this admin";
-    return;
-  }
-
-  // Save restaurant_id in localStorage
-  localStorage.setItem("restaurant_id", profile.restaurant_id);
 
   window.location.href="dashboard.html";
 };
