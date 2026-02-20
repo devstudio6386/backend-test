@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Zixy Bite - Digital Menu</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,18 +29,13 @@ h1, h2 { font-family: 'Poppins', sans-serif; }
 </style>
 </head>
 
-<body class="h-full bg-[#0D0D0D] text-white overflow-auto">
+<body class="h-full bg-[#0D0D0D] text-white">
 
 <div class="w-full min-h-full max-w-2xl mx-auto relative">
 
-<header class="sticky top-0 z-50 bg-[#0D0D0D]/95 border-b border-[#2A2A2A] px-4 py-4 flex items-center">
-  <div>
-    <h1 class="font-bold text-xl">Zixy Bite</h1>
-    <p class="text-xs text-gray-400">Delicious Food, Delivered Hot</p>
-  </div>
-  <button onclick="logout()" class="ml-auto bg-red-500 px-3 py-1 rounded text-sm">
-    Logout
-  </button>
+<header class="sticky top-0 z-50 bg-[#0D0D0D]/95 border-b border-[#2A2A2A] px-4 py-4">
+  <h1 class="font-bold text-xl">Zixy Bite</h1>
+  <p class="text-xs text-gray-400">Delicious Food, Delivered Hot</p>
 </header>
 
 <div class="sticky top-16 z-40 bg-[#0D0D0D]/95 px-4 py-3 border-b border-[#2A2A2A]">
@@ -68,23 +63,11 @@ const supabaseClient = supabase.createClient(
   "sb_publishable_4_CsTkcZtuVeFxMSpjR8mQ_NpZaGkWX"
 );
 
-// 🔐 LOGIN CHECK (IMPORTANT)
-supabaseClient.auth.getUser().then(({ data }) => {
-  if (!data.user) {
-    window.location.href = "admin.html";
-  }
-});
-
-async function logout() {
-  await supabaseClient.auth.signOut();
-  window.location.href = "admin.html";
-}
-
 let allData = [];
 let activeCategory = "All";
 let searchQuery = "";
 
-// Load Menu
+// Load menu
 async function loadMenu() {
   const { data, error } = await supabaseClient
     .from("menu")
@@ -100,6 +83,7 @@ async function loadMenu() {
   renderMenu();
 }
 
+// Render categories dynamically
 function renderCategories() {
   const container = document.getElementById("category-pills");
 
@@ -126,6 +110,7 @@ function filterCategory(category) {
   renderMenu();
 }
 
+// Render dishes
 function renderMenu() {
   const container = document.getElementById("menu-container");
 
@@ -150,6 +135,7 @@ function renderMenu() {
   `).join("");
 }
 
+// Search
 document.getElementById("search-input")
   .addEventListener("input", (e) => {
     searchQuery = e.target.value.toLowerCase();
