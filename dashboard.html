@@ -38,7 +38,7 @@
   <input id="image" placeholder="Image URL"
     class="w-full mb-4 px-4 py-3 rounded-lg bg-[#2A2A2A]">
 
-  <button onclick="addDish()"
+  <button id="submitBtn" onclick="addDish()"
     class="w-full py-3 bg-[#A8E63D] text-black font-bold rounded-lg">
     Add Dish
   </button>
@@ -58,6 +58,8 @@ const supabaseClient = supabase.createClient(
   "sb_publishable_4_CsTkcZtuVeFxMSpjR8mQ_NpZaGkWX"
 );
 
+let editId = null;
+
 // Protect dashboard
 supabaseClient.auth.getUser().then(({ data }) => {
   if (!data.user) {
@@ -66,36 +68,86 @@ supabaseClient.auth.getUser().then(({ data }) => {
 });
 
 async function addDish() {
+
   const name = document.getElementById("name").value;
   const category = document.getElementById("category").value;
   const price = document.getElementById("price").value;
   const image = document.getElementById("image").value;
 
-  const { error } = await supabaseClient.from("menu").insert([
-    { name, category, price, image }
-  ]);
-
-  if (!error) {
-    alert("Dish Added");
-    loadDishes();
+  if(!name || !category || !price || !image){
+    alert("Fill all fields");
+    return;
   }
+
+  if(editId){
+    await supabaseClient
+      .from("menu")
+      .update({ name, category, price, image })
+      .eq("id", editId);
+
+    editId = null;
+    document.getElementById("submitBtn").innerText = "Add Dish";
+    alert("Dish Updated");
+
+  } else {
+
+    await supabaseClient
+      .from("menu")
+      .insert([{ name, category, price, image }]);
+
+    alert("Dish Added");
+  }
+
+  document.getElementById("name").value = "";
+  document.getElementById("category").value = "";
+  document.getElementById("price").value = "";
+  document.getElementById("image").value = "";
+
+  loadDishes();
 }
 
 async function loadDishes() {
-  const { data } = await supabaseClient.from("menu").select("*");
+
+  const { data } = await supabaseClient
+    .from("menu")
+    .select("*")
+    .order("id", { ascending: false });
 
   const container = document.getElementById("dish-list");
+
   container.innerHTML = data.map(item => `
     <div class="bg-[#1A1A1A] p-4 rounded-xl">
       <h3 class="font-bold">${item.name}</h3>
       <p class="text-sm text-gray-400">${item.category}</p>
       <p class="text-[#A8E63D] font-semibold mb-3">₹${item.price}</p>
-      <button onclick="deleteDish('${item.id}')"
-        class="px-4 py-2 bg-red-500 rounded-lg text-white">
-        Delete
-      </button>
+
+      <div class="flex gap-2">
+        <button onclick="editDish('${item.id}','${item.name}','${item.category}','${item.price}','${item.image}')"
+          class="px-4 py-2 bg-blue-500 rounded-lg text-white">
+          Edit
+        </button>
+
+        <button onclick="deleteDish('${item.id}')"
+          class="px-4 py-2 bg-red-500 rounded-lg text-white">
+          Delete
+        </button>
+      </div>
     </div>
   `).join("");
+}
+
+function editDish(id, name, category, price, image){
+
+  document.getElementById("name").value = name;
+  document.getElementById("category").value = category;
+  document.getElementById("price").value = price;
+  document.getElementById("image").value = image;
+
+  editId = id;
+
+  document.getElementById("submitBtn").innerText = "Update Dish";
+
+  window.scrollTo({top:0,behavior:"smooth"});
 }
 
 async function deleteDish(id) {
