@@ -2,268 +2,135 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Restaurant Admin Panel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Login</title>
 
 <style>
-*{
-  box-sizing: border-box;
-}
+*{margin:0;padding:0;box-sizing:border-box;}
 
 body{
-  margin:0;
-  background: linear-gradient(135deg,#0f0f0f,#1a1a1a);
-  font-family: 'Segoe UI', sans-serif;
-  color:white;
+  font-family:Arial, sans-serif;
+  background:linear-gradient(135deg,#0f0f0f,#1a1a1a);
   display:flex;
   justify-content:center;
+  align-items:center;
+  height:100vh;
+  color:white;
 }
 
-.container{
+.login-box{
   width:100%;
-  max-width:500px;
-  padding:20px;
+  max-width:380px;
+  background:#1c1c1c;
+  padding:30px;
+  border-radius:12px;
+  box-shadow:0 10px 25px rgba(0,0,0,0.5);
 }
 
 h2{
-  margin-top:25px;
-  font-size:20px;
-  font-weight:600;
+  text-align:center;
+  margin-bottom:20px;
 }
 
 input{
   width:100%;
-  padding:14px;
+  padding:12px;
   margin:10px 0;
-  border-radius:10px;
+  border-radius:8px;
   border:1px solid #333;
-  background:#1f1f1f;
+  background:#111;
   color:white;
-  font-size:14px;
-  outline:none;
-  transition:0.3s;
 }
 
 input:focus{
+  outline:none;
   border-color:#00e676;
-  box-shadow:0 0 8px #00e67650;
 }
 
-#submitBtn{
+button{
   width:100%;
-  padding:14px;
-  margin-top:10px;
+  padding:12px;
+  margin-top:15px;
   border:none;
-  border-radius:10px;
-  font-weight:600;
-  font-size:15px;
-  cursor:pointer;
-  background:linear-gradient(90deg,#00e676,#00c853);
+  border-radius:8px;
+  background:#00e676;
   color:black;
-  transition:0.3s;
+  font-weight:bold;
+  cursor:pointer;
 }
 
-#submitBtn:hover{
+button:hover{
   opacity:0.9;
 }
 
-.card{
-  background:#1c1c1c;
-  padding:15px;
-  border-radius:15px;
-  margin-top:18px;
-  box-shadow:0 8px 20px rgba(0,0,0,0.4);
-  transition:0.3s;
-}
-
-.card:hover{
-  transform:translateY(-3px);
-}
-
-.card h3{
-  margin:0;
-  font-size:18px;
-}
-
-.card p{
-  margin:4px 0;
-  color:#aaa;
+.error{
+  color:#ff4d4d;
   font-size:13px;
-}
-
-.price{
-  color:#00ff88;
-  font-weight:600;
-  margin:6px 0;
-}
-
-img{
-  width:100%;
-  height:160px;
-  object-fit:cover;
-  border-radius:10px;
-  margin-top:8px;
-}
-
-.actions{
-  display:flex;
-  gap:10px;
-  margin-top:12px;
-}
-
-.edit-btn{
-  flex:1;
-  padding:10px;
-  border:none;
-  border-radius:8px;
-  background:#00bcd4;
-  color:white;
-  cursor:pointer;
-  font-weight:500;
-}
-
-.delete-btn{
-  flex:1;
-  padding:10px;
-  border:none;
-  border-radius:8px;
-  background:#ff4d4d;
-  color:white;
-  cursor:pointer;
-  font-weight:500;
-}
-
-@media (max-width:400px){
-  h2{
-    font-size:18px;
-  }
+  margin-top:10px;
+  text-align:center;
 }
 </style>
 </head>
 
 <body>
 
-<h2>Add / Edit Dish</h2>
+<div class="login-box">
+  <h2>Admin Login</h2>
 
-<input type="text" id="name" placeholder="Dish Name">
-<input type="text" id="category" placeholder="Category">
-<input type="number" id="price" placeholder="Price">
-<input type="text" id="image" placeholder="Image URL">
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Password">
 
-<button id="submitBtn">Add Dish</button>
+  <button id="loginBtn">Login</button>
 
-<h2>All Dishes</h2>
-<div id="dishList"></div>
+  <div class="error" id="errorMsg"></div>
+</div>
 
-<script type="module">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
 
-// 🔥 Firebase Imports
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+const supabaseUrl = "https://pxdzdwljccgdruzaqhlt.supabase.co";
+const supabaseKey = "sb_publishable_4_CsTkcZtuVeFxMSpjR8mQ_NpZaGkWX";
 
-// 🔥 PASTE YOUR FIREBASE CONFIG HERE
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  databaseURL: "YOUR_DATABASE_URL",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+const emailInput = document.getElementById("email");
+const passwordInput = document.getElementById("password");
+const loginBtn = document.getElementById("loginBtn");
+const errorMsg = document.getElementById("errorMsg");
 
-let editId = null;
+// Check if already logged in
+async function checkSession(){
+  const { data } = await supabaseClient.auth.getSession();
+  if(data.session){
+    window.location.href="dashboard.html";
+  }
+}
+checkSession();
 
-const nameInput = document.getElementById("name");
-const categoryInput = document.getElementById("category");
-const priceInput = document.getElementById("price");
-const imageInput = document.getElementById("image");
-const submitBtn = document.getElementById("submitBtn");
-const dishList = document.getElementById("dishList");
+// Login
+loginBtn.onclick = async () => {
 
-// 🔥 Add / Update Dish
-submitBtn.onclick = () => {
+  const email = emailInput.value.trim();
+  const password = passwordInput.value.trim();
 
-  const name = nameInput.value;
-  const category = categoryInput.value;
-  const price = priceInput.value;
-  const image = imageInput.value;
-
-  if(!name || !category || !price || !image){
-    alert("Please fill all fields");
+  if(!email || !password){
+    errorMsg.innerText="Please fill all fields";
     return;
   }
 
-  if(editId){
-    update(ref(db,"dishes/"+editId),{
-      name,category,price,image
-    });
-    editId = null;
-    submitBtn.innerText = "Add Dish";
-    alert("Dish Updated Successfully");
-  } else {
-    push(ref(db,"dishes"),{
-      name,category,price,image
-    });
-    alert("Dish Added Successfully");
-  }
-
-  nameInput.value="";
-  categoryInput.value="";
-  priceInput.value="";
-  imageInput.value="";
-};
-
-// 🔥 Load Dishes
-onValue(ref(db,"dishes"), snapshot => {
-
-  dishList.innerHTML = "";
-
-  snapshot.forEach(child => {
-
-    const dish = child.val();
-    const id = child.key;
-
-    const card = document.createElement("div");
-    card.className="card";
-
-    card.innerHTML=`
-      <h3>${dish.name}</h3>
-      <p>${dish.category}</p>
-      <div class="price">₹${dish.price}</div>
-      <img src="${dish.image}">
-      <div class="actions">
-        <button class="edit-btn">Edit</button>
-        <button class="delete-btn">Delete</button>
-      </div>
-    `;
-
-    // Edit Button
-    card.querySelector(".edit-btn").onclick = () => {
-      nameInput.value = dish.name;
-      categoryInput.value = dish.category;
-      priceInput.value = dish.price;
-      imageInput.value = dish.image;
-      editId = id;
-      submitBtn.innerText="Update Dish";
-      window.scrollTo({top:0,behavior:"smooth"});
-    };
-
-    // Delete Button
-    card.querySelector(".delete-btn").onclick = () => {
-      if(confirm("Are you sure you want to delete?")){
-        remove(ref(db,"dishes/"+id));
-      }
-    };
-
-    dishList.appendChild(card);
-
+  const { error } = await supabaseClient.auth.signInWithPassword({
+    email: email,
+    password: password
   });
 
-});
+  if(error){
+    errorMsg.innerText="Invalid login credentials";
+  }else{
+    window.location.href="dashboard.html";
+  }
+};
 
 </script>
 
-</body
+</body>
+</html>
