@@ -1,74 +1,212 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Login</title>
+<title>Restaurant Admin Panel</title>
 
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
-
-<body class="min-h-screen bg-[#0D0D0D] flex items-center justify-center px-4">
-
-<div class="w-full max-w-sm bg-[#1A1A1A] p-6 rounded-xl shadow-xl">
-
-<h2 class="text-2xl font-bold text-white mb-6 text-center">
-Admin Login
-</h2>
-
-<input 
-type="email" 
-id="email" 
-placeholder="Email"
-class="w-full mb-4 px-4 py-3 rounded-lg bg-[#2A2A2A] text-white focus:outline-none focus:border border-[#A8E63D]"
->
-
-<input 
-type="password" 
-id="password" 
-placeholder="Password"
-class="w-full mb-6 px-4 py-3 rounded-lg bg-[#2A2A2A] text-white focus:outline-none focus:border border-[#A8E63D]"
->
-
-<button 
-onclick="login()" 
-class="w-full py-3 rounded-lg bg-[#A8E63D] text-black font-bold hover:opacity-90 transition"
-> 
-Login
-</button>
-
-</div>
-
-<script>
-const supabaseClient = supabase.createClient(
-  "https://pxdzdwljccgdruzaqhlt.supabase.co",
-  "sb_publishable_4_CsTkcZtuVeFxMSpjR8mQ_NpZaGkWX"
-);
-
-async function login() {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-
-  const { error } = await supabaseClient.auth.signInWithPassword({
-    email,
-    password
-  });
-
-  if (error) {
-    alert("Login Failed");
-  } else {
-    window.location.href = "dashboard.html";
-  }
+<style>
+body {
+  background:#0f0f0f;
+  font-family: Arial, sans-serif;
+  color:white;
+  padding:20px;
 }
 
-// Already logged-in check
-supabaseClient.auth.getUser().then(({ data }) => {
-  if (data.user) {
-    window.location.href = "dashboard.html";
+h2 { margin-top:30px; }
+
+input {
+  width:100%;
+  padding:12px;
+  margin:8px 0;
+  border-radius:8px;
+  border:none;
+  font-size:14px;
+}
+
+#submitBtn {
+  background:#00e676;
+  color:black;
+  font-weight:bold;
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.card {
+  background:#1c1c1c;
+  padding:15px;
+  border-radius:12px;
+  margin-top:15px;
+}
+
+.price {
+  color:#00ff88;
+  font-weight:bold;
+  margin:8px 0;
+}
+
+.actions {
+  display:flex;
+  gap:10px;
+  margin-top:10px;
+}
+
+.edit-btn {
+  background:#00bcd4;
+  color:white;
+  flex:1;
+  padding:8px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+.delete-btn {
+  background:#ff4d4d;
+  color:white;
+  flex:1;
+  padding:8px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+img {
+  width:100%;
+  height:150px;
+  object-fit:cover;
+  border-radius:8px;
+  margin-top:8px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Add / Edit Dish</h2>
+
+<input type="text" id="name" placeholder="Dish Name">
+<input type="text" id="category" placeholder="Category">
+<input type="number" id="price" placeholder="Price">
+<input type="text" id="image" placeholder="Image URL">
+
+<button id="submitBtn">Add Dish</button>
+
+<h2>All Dishes</h2>
+<div id="dishList"></div>
+
+<script type="module">
+
+// 🔥 Firebase Imports
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+// 🔥 PASTE YOUR FIREBASE CONFIG HERE
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  databaseURL: "YOUR_DATABASE_URL",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+let editId = null;
+
+const nameInput = document.getElementById("name");
+const categoryInput = document.getElementById("category");
+const priceInput = document.getElementById("price");
+const imageInput = document.getElementById("image");
+const submitBtn = document.getElementById("submitBtn");
+const dishList = document.getElementById("dishList");
+
+// 🔥 Add / Update Dish
+submitBtn.onclick = () => {
+
+  const name = nameInput.value;
+  const category = categoryInput.value;
+  const price = priceInput.value;
+  const image = imageInput.value;
+
+  if(!name || !category || !price || !image){
+    alert("Please fill all fields");
+    return;
   }
+
+  if(editId){
+    update(ref(db,"dishes/"+editId),{
+      name,category,price,image
+    });
+    editId = null;
+    submitBtn.innerText = "Add Dish";
+    alert("Dish Updated Successfully");
+  } else {
+    push(ref(db,"dishes"),{
+      name,category,price,image
+    });
+    alert("Dish Added Successfully");
+  }
+
+  nameInput.value="";
+  categoryInput.value="";
+  priceInput.value="";
+  imageInput.value="";
+};
+
+// 🔥 Load Dishes
+onValue(ref(db,"dishes"), snapshot => {
+
+  dishList.innerHTML = "";
+
+  snapshot.forEach(child => {
+
+    const dish = child.val();
+    const id = child.key;
+
+    const card = document.createElement("div");
+    card.className="card";
+
+    card.innerHTML=`
+      <h3>${dish.name}</h3>
+      <p>${dish.category}</p>
+      <div class="price">₹${dish.price}</div>
+      <img src="${dish.image}">
+      <div class="actions">
+        <button class="edit-btn">Edit</button>
+        <button class="delete-btn">Delete</button>
+      </div>
+    `;
+
+    // Edit Button
+    card.querySelector(".edit-btn").onclick = () => {
+      nameInput.value = dish.name;
+      categoryInput.value = dish.category;
+      priceInput.value = dish.price;
+      imageInput.value = dish.image;
+      editId = id;
+      submitBtn.innerText="Update Dish";
+      window.scrollTo({top:0,behavior:"smooth"});
+    };
+
+    // Delete Button
+    card.querySelector(".delete-btn").onclick = () => {
+      if(confirm("Are you sure you want to delete?")){
+        remove(ref(db,"dishes/"+id));
+      }
+    };
+
+    dishList.appendChild(card);
+
+  });
+
 });
+
 </script>
 
-</body>
-</html>
+</body
